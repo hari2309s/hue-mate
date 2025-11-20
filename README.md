@@ -1,6 +1,6 @@
 # 🎨 Hue & You
 
-Extract perfect color palettes from images instantly. Built for designers who demand precision.
+ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS custom properties. Built for designers who ship.
 
 ## ✨ Features
 
@@ -21,21 +21,6 @@ Extract perfect color palettes from images instantly. Built for designers who de
 - **ML**: Hugging Face inference API
 - **Deployment**: Vercel-ready
 
-## 📁 Project Structure
-
-```
-hue-und-you/
-├── apps/
-│   ├── web/          # Next.js frontend
-│   └── api/          # Node.js backend
-├── packages/
-│   ├── db/           # Database schema & client
-│   ├── api/          # tRPC router
-│   └── ui/           # Shared components
-└── scripts/
-    └── init.sh       # Setup script
-```
-
 ## 🛠️ Setup
 
 ### Prerequisites
@@ -50,10 +35,6 @@ hue-und-you/
 # Clone repository
 git clone <your-repo-url>
 cd hue-und-you
-
-# Run initialization script
-chmod +x scripts/init.sh
-./scripts/init.sh
 
 # Update environment variables
 # Edit .env.local with your database credentials and Hugging Face API key
@@ -132,16 +113,6 @@ No external color libraries - pure algorithmic implementation for maximum contro
 - `palettes` - Saved color palettes
 - `api_keys` - API key management & usage tracking
 
-### Relationships
-
-- User → Many Palettes
-- User → One API Key
-
-## 🔒 API Rate Limits
-
-- **Free Tier**: 10 extractions/day
-- **Pro Tier**: Unlimited ($9/month)
-
 ## 🚢 Deployment
 
 ### Vercel (Recommended)
@@ -183,14 +154,6 @@ palette.getById     - Get palette by ID
 palette.listByUser  - List user palettes
 ```
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing`)
-5. Open a Pull Request
-
 ## 📄 License
 
 MIT License - see LICENSE file for details
@@ -201,10 +164,6 @@ MIT License - see LICENSE file for details
 - Tailwind CSS for design system
 - shadcn/ui for component library
 - Vercel for hosting platform
-
-## 📧 Support
-
-For support, email support@hueundyou.com or join our Discord.
 
 ---
 
