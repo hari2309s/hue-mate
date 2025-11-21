@@ -6,8 +6,8 @@ const Header = () => {
   return (
     <header className="flex items-center justify-between p-10 w-screen text-dark-purple">
       <motion.div
-        initial={{ opacity: 0, y: 0 }}
-        animate={{ opacity: 1, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="flex justify-center items-center space-x-2 w-full"
       >

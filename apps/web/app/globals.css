@@ -1,6 +1,36 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  --color-black: #000;
+  --color-dark-cream: #f2eee5;
+  --color-dark-purple: #160e20;
+  --color-green: #29a176;
+  --color-grey-stroke: #cbcbcb;
+  --color-light-cream: #f8f8f0;
+  --color-light-purple: #cda6ff;
+  --color-orange: #fe4f32;
+  --color-player-purple: #45355b;
+  --color-red: #ff0000;
+  --color-small-txt: #605a67;
+  --color-white: #fff;
+
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Georgia', serif;
+  --font-mono: 'Monaco', monospace;
+
+  --spacing-128: 32rem;
+  --spacing-144: 36rem;
+
+  --radius-4xl: 2rem;
+
+  --shadow-glow: 0 0 10px 2px rgba(14, 165, 233, 0.3);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
