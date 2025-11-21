@@ -2,28 +2,26 @@
 @import 'tw-animate-css';
 
 @theme {
-  --color-black: #000;
-  --color-dark-cream: #f2eee5;
-  --color-dark-purple: #160e20;
-  --color-green: #29a176;
-  --color-grey-stroke: #cbcbcb;
-  --color-light-cream: #f8f8f0;
-  --color-light-purple: #cda6ff;
-  --color-orange: #fe4f32;
-  --color-player-purple: #45355b;
-  --color-red: #ff0000;
-  --color-small-txt: #605a67;
-  --color-white: #fff;
+  /* Custom Colors */
+  --color-deep-black: #11151c;
+  --color-deep-blue: #212d40;
+  --color-muted-blue: #364156;
+  --color-muted-pink: #7d4e57;
+  --color-soft-orange: #d66853;
 
+  /* Fonts */
   --font-sans: 'Inter', sans-serif;
   --font-serif: 'Georgia', serif;
   --font-mono: 'Monaco', monospace;
 
+  /* Spacing */
   --spacing-128: 32rem;
   --spacing-144: 36rem;
 
+  /* Border Radius */
   --radius-4xl: 2rem;
 
+  /* Shadows */
   --shadow-glow: 0 0 10px 2px rgba(14, 165, 233, 0.3);
 }
 
@@ -32,5 +30,35 @@
   *::before,
   *::after {
     box-sizing: border-box;
+  }
+
+  :root {
+    --background: #f8f8f8;
+    --foreground: #11151c;
+    --card: #ffffff;
+    --card-foreground: #11151c;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    --border: #e2e8f0;
+    --ring: #d66853;
+  }
+
+  .dark {
+    --background: #11151c;
+    --foreground: #f8f8f8;
+    --card: #212d40;
+    --card-foreground: #f8f8f8;
+    --muted: #364156;
+    --muted-foreground: #94a3b8;
+    --border: #364156;
+    --ring: #d66853;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 }
