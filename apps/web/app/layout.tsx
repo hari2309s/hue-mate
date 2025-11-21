@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'hue-und-you',
-  description: 'LLM-powered Color Palette Generator',
+  description: 'ML-driven perceptual color extractor',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
