@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 const Header = () => {
   return (
-    <header className="flex items-center justify-between p-10 w-screen">
+    <header className="flex items-center justify-between p-10 w-screen text-dark-purple">
       <motion.div
         initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: 1, y: 20 }}
