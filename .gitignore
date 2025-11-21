@@ -1,44 +1,34 @@
-# Dependencies
-node_modules
-.pnpm
+node_modules/
 pnpm-lock.yaml
-package-lock.json
 yarn.lock
-
-# Environment
+package-lock.json
 .env
 .env.local
 .env.*.local
-
-# Build outputs
-dist
-build
-.next
-out
-
-# Cache
-.turbo
-.eslintcache
-.tsc-cache
-
-# IDE
-.vscode
-.idea
+dist/
+build/
+.next/
+out/
+.turbo/
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
 .DS_Store
-
-# Logs
+logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
-yarn-debug.log*
-
-# Testing
-coverage
-.jest-cache
-
-# Database
 *.db
 *.sqlite
+*.sqlite3
+Thumbs.db
+.clinerules/byterover-rules.md
+.kilocode/rules/byterover-rules.md
+.roo/rules/byterover-rules.md
+.windsurf/rules/byterover-rules.md
+.cursor/rules/byterover-rules.mdc
+.kiro/steering/byterover-rules.md
+.qoder/rules/byterover-rules.md
+.augment/rules/byterover-rules.md

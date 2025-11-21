@@ -1,33 +1,42 @@
 {
   "name": "@hue-und-you/api",
   "version": "1.0.0",
-  "type": "module",
-  "private": true,
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node --import tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "db:push": "drizzle-kit push --config ../../packages/db/drizzle.config.ts",
-    "db:generate": "drizzle-kit generate --config ../../packages/db/drizzle.config.ts"
+    "type-check": "tsc --noEmit"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.22.0",
   "dependencies": {
-    "@hue-und-you/api": "workspace:*",
+    "@hue-und-you/api-schema": "workspace:*",
     "@hue-und-you/db": "workspace:*",
+    "@hue-und-you/types": "workspace:*",
+    "@langchain/community": "^1.0.4",
     "@trpc/server": "^11.7.1",
-    "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.7",
     "express": "^5.1.0",
-    "multer": "^2.0.2",
-    "sharp": "^0.34.5",
+    "huggingface": "link:langchain/llms/huggingface",
+    "langchain": "^1.0.6",
+    "pg": "^8.16.3",
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
-    "@types/node": "^24.10.1",
+    "@types/node": "^20.19.25",
+    "drizzle-kit": "^0.31.7",
+    "eslint": "^9.39.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
-  }
+  },
+  "type": "module"
 }

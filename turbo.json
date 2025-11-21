@@ -1,36 +1,26 @@
 {
-  "$schema": "https://turborepo.org/schema.json",
+  "globalEnv": ["NODE_ENV"],
   "tasks": {
-    "dev": {
-      "cache": false,
-      "persistent": true,
-      "outputs": []
-    },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "build/**"],
-      "cache": true
+      "outputs": ["dist/**", "build/**", ".next/**"],
+      "env": ["NODE_ENV"]
     },
-    "typecheck": {
-      "cache": true,
-      "outputs": []
+    "dev": {
+      "cache": false,
+      "persistent": true
     },
     "lint": {
-      "cache": true,
-      "outputs": []
+      "outputs": [],
+      "cache": true
     },
-    "test": {
-      "cache": true,
-      "outputs": ["coverage/**"]
+    "type-check": {
+      "outputs": [],
+      "cache": true
     },
     "clean": {
       "cache": false
-    },
-    "db:push": {
-      "cache": false
-    },
-    "db:generate": {
-      "cache": false
     }
-  }
+  },
+  "globalPassThroughEnv": ["DATABASE_URL", "OPENAI_API_KEY", "HUGGINGFACE_API_KEY"]
 }

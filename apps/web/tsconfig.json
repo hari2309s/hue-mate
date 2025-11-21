@@ -1,12 +1,15 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../packages/config/src/typescript/react.json",
   "compilerOptions": {
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "jsx": "preserve",
-    "jsxImportSource": "react",
+    "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"],
+      "@hue-und-you/ui": ["../../packages/ui/src"],
+      "@hue-und-you/db": ["../../packages/db/src"],
+      "@hue-und-you/api-schema": ["../../packages/api-schema/src"],
+      "@hue-und-you/types": ["../../packages/types/src"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
