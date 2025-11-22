@@ -1,3 +1,5 @@
+// apps/web/src/components/ColorPaletteDisplay.tsx
+
 'use client';
 
 import { useState } from 'react';
@@ -33,6 +35,23 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
     { label: 'OKLCH', value: color.formats.oklch.css },
   ];
 
+  // Temperature badge styles with proper contrast for both light and dark modes
+  const getTemperatureBadgeClasses = (temp: string) => {
+    switch (temp) {
+      case 'warm':
+        return 'bg-orange-500 text-white';
+      case 'cool':
+        return 'bg-blue-500 text-white';
+      default:
+        return 'bg-gray-500 text-white';
+    }
+  };
+
+  // Contrast badge styles
+  const getContrastBadgeClasses = (passes: boolean) => {
+    return passes ? 'bg-green-600 text-white' : 'bg-red-600 text-white';
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -60,13 +79,7 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium text-var(--foreground)">{color.name}</h3>
           <span
-            className={`text-xs px-2 py-0.5 rounded-sm ${
-              color.metadata.temperature === 'warm'
-                ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-                : color.metadata.temperature === 'cool'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-            }`}
+            className={`text-xs px-2 py-0.5 rounded-sm font-medium ${getTemperatureBadgeClasses(color.metadata.temperature)}`}
           >
             {color.metadata.temperature}
           </span>
@@ -99,11 +112,7 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
         <div className="flex items-center gap-2 text-xs mb-3">
           <span className="text-var(--muted-foreground)">Contrast on white:</span>
           <span
-            className={`px-1.5 py-0.5 rounded ${
-              color.accessibility.contrast_on_white.wcag_aa_normal
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-            }`}
+            className={`px-1.5 py-0.5 rounded font-medium ${getContrastBadgeClasses(color.accessibility.contrast_on_white.wcag_aa_normal)}`}
           >
             {color.accessibility.contrast_on_white.ratio}:1
           </span>
@@ -112,7 +121,7 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
         {/* Expand/collapse */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full flex items-center justify-center gap-1 text-xs text-var(--muted-foreground) hover:text-var(--foreground) transition-colors"
+          className="w-full flex items-center justify-center gap-1 text-xs text-var(--muted-foreground) hover:text-var(--foreground) transition-colors cursor-pointer"
         >
           {expanded ? 'Show less' : 'Show tints & shades'}
           {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -167,19 +176,19 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
 
 const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
   const [showExports, setShowExports] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedExport, setCopiedExport] = useState<string | null>(null);
 
   const copyExport = async (content: string, label: string) => {
     await navigator.clipboard.writeText(content);
-    setCopied(true);
+    setCopiedExport(label);
     toast.success(`Copied ${label}`);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopiedExport(null), 2000);
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto mt-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h2 className="text-2xl font-medium text-var(--foreground)] mb-2">Extracted Palette</h2>
+        <h2 className="text-2xl font-medium text-var(--foreground) mb-2">Extracted Palette</h2>
         <p className="text-var(--muted-foreground)">
           {result.palette.length} colors extracted from {result.source_image.filename}
         </p>
@@ -201,7 +210,7 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
       >
         <button
           onClick={() => setShowExports(!showExports)}
-          className="w-full flex items-center justify-between p-4 hover:bg-var(--muted) transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-var(--muted) transition-colors cursor-pointer"
         >
           <span className="font-medium text-var(--foreground)">Export Formats</span>
           {showExports ? (
@@ -228,11 +237,15 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
                       onClick={() => copyExport(result.exports.css_variables, 'CSS variables')}
                       className="text-xs text-soft-orange hover:underline flex items-center gap-1"
                     >
-                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                      {copiedExport === 'CSS variables' ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
                       Copy
                     </button>
                   </div>
-                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40">
+                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
                     <code>{result.exports.css_variables}</code>
                   </pre>
                 </div>
@@ -249,7 +262,7 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
                       Copy
                     </button>
                   </div>
-                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40">
+                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
                     <code>{result.exports.scss_variables}</code>
                   </pre>
                 </div>
@@ -271,7 +284,7 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
                       Copy
                     </button>
                   </div>
-                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40">
+                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
                     <code>{JSON.stringify(result.exports.tailwind_config, null, 2)}</code>
                   </pre>
                 </div>

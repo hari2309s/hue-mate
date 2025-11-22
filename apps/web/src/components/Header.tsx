@@ -11,7 +11,7 @@ const Header = () => {
         transition={{ duration: 0.5 }}
         className="flex justify-center items-center space-x-2 w-full"
       >
-        <motion.h1 className="text-3xl font-medium" whileHover={{ scale: 1.05 }}>
+        <motion.h1 className="text-3xl font-medium text-soft-orange" whileHover={{ scale: 1.05 }}>
           hue-und-you
         </motion.h1>
       </motion.div>
