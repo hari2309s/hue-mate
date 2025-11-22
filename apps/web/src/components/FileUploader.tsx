@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, File, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,10 +33,12 @@ const FileUploader = ({
   const maxBytes = maxSizeMB * 1024 * 1024;
   const isBusy = isUploading || isProcessing;
 
-  // Notify parent of result changes
-  if (result && onResultChange) {
-    onResultChange(result);
-  }
+  // FIX: Use useEffect to notify parent of result changes instead of during render
+  useEffect(() => {
+    if (onResultChange) {
+      onResultChange(result);
+    }
+  }, [result, onResultChange]);
 
   const validateFile = useCallback(
     (file: File): string | null => {
@@ -151,9 +153,8 @@ const FileUploader = ({
       const newFiles = files.filter((_, i) => i !== index);
       setFiles(newFiles);
       reset();
-      onResultChange?.(null);
     },
-    [files, reset, onResultChange]
+    [files, reset]
   );
 
   const formatFileSize = (bytes: number): string => {

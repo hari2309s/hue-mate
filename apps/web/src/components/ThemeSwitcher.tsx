@@ -52,7 +52,7 @@ const ThemeSwitcher = () => {
   return (
     <motion.button
       onClick={cycleTheme}
-      className="fixed top-5 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-md bg-var(--card) shadow-lg border border-var(--border) cursor-pointer overflow-hidden"
+      className="fixed top-4 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-md bg-var(--card) shadow-lg border border-dashed border-var(--border) cursor-pointer overflow-hidden"
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
       initial={{ opacity: 0, y: 0 }}
