@@ -18,7 +18,7 @@ const SEGFORMER_MODEL = 'nvidia/segformer-b5-finetuned-ade-640-640';
 
 interface SegmentationResult {
   label: string;
-  mask: string; // base64 encoded mask
+  mask: string;
   score: number;
 }
 
@@ -30,12 +30,11 @@ async function callHFInference(model: string, imageBuffer: Buffer): Promise<Segm
       Authorization: `Bearer ${HF_TOKEN}`,
       'Content-Type': 'application/octet-stream',
     },
-    body: imageBuffer,
+    body: new Uint8Array(imageBuffer),
   });
 
   if (!response.ok) {
     if (response.status === 503) {
-      // Model loading, retry after delay
       await new Promise((r) => setTimeout(r, 20000));
       return callHFInference(model, imageBuffer);
     }
@@ -77,14 +76,17 @@ function rgbToHex(r: number, g: number, b: number): string {
   return (
     '#' +
     [r, g, b]
-      .map((x) => x.toString(16).padStart(2, '0'))
+      .map((x) =>
+        Math.max(0, Math.min(255, Math.round(x)))
+          .toString(16)
+          .padStart(2, '0')
+      )
       .join('')
       .toUpperCase()
   );
 }
 
 function rgbToOklch(r: number, g: number, b: number): { l: number; c: number; h: number } {
-  // Simplified OKLCH conversion
   const rn = r / 255,
     gn = g / 255,
     bn = b / 255;
@@ -180,7 +182,6 @@ function rgbToCmyk(
 }
 
 function rgbToLab(r: number, g: number, b: number): { l: number; a: number; b: number } {
-  // Convert to XYZ first
   let rn = r / 255,
     gn = g / 255,
     bn = b / 255;
@@ -210,7 +211,6 @@ function labToLch(l: number, a: number, b: number): { l: number; c: number; h: n
   return { l, c: Math.round(c), h: Math.round(h) };
 }
 
-// Build all color formats
 function buildColorFormats(hex: string): ColorFormats {
   const rgb = hexToRgb(hex);
   const oklch = rgbToOklch(rgb.r, rgb.g, rgb.b);
@@ -232,7 +232,6 @@ function buildColorFormats(hex: string): ColorFormats {
   };
 }
 
-// Calculate relative luminance
 function relativeLuminance(r: number, g: number, b: number): number {
   const [rs, gs, bs] = [r, g, b].map((c) => {
     c /= 255;
@@ -241,7 +240,6 @@ function relativeLuminance(r: number, g: number, b: number): number {
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 }
 
-// Calculate WCAG contrast ratio
 function contrastRatio(
   rgb1: { r: number; g: number; b: number },
   rgb2: { r: number; g: number; b: number }
@@ -253,7 +251,6 @@ function contrastRatio(
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// Build accessibility info
 function buildAccessibilityInfo(hex: string): AccessibilityInfo {
   const rgb = hexToRgb(hex);
   const white = { r: 255, g: 255, b: 255 };
@@ -291,7 +288,12 @@ function buildAccessibilityInfo(hex: string): AccessibilityInfo {
   };
 }
 
-// Generate tints and shades in OKLCH
+function adjustLightness(hex: string, amount: number): string {
+  const rgb = hexToRgb(hex);
+  const adjust = (c: number) => Math.max(0, Math.min(255, c + amount));
+  return rgbToHex(adjust(rgb.r), adjust(rgb.g), adjust(rgb.b));
+}
+
 function generateTintsShades(
   hex: string,
   name: string
@@ -305,7 +307,6 @@ function generateTintsShades(
     const tintL = Math.min(oklch.l + i * 0.1, 1);
     const shadeL = Math.max(oklch.l - i * 0.1, 0);
 
-    // Simplified conversion back - in production use proper colour-science
     const tintHex = adjustLightness(hex, i * 15);
     const shadeHex = adjustLightness(hex, -i * 15);
 
@@ -327,52 +328,42 @@ function generateTintsShades(
   return { tints, shades };
 }
 
-function adjustLightness(hex: string, amount: number): string {
-  const rgb = hexToRgb(hex);
-  const adjust = (c: number) => Math.max(0, Math.min(255, c + amount));
-  return rgbToHex(adjust(rgb.r), adjust(rgb.g), adjust(rgb.b));
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100;
+  l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0,
+    g = 0,
+    b = 0;
+  if (h < 60) {
+    r = c;
+    g = x;
+  } else if (h < 120) {
+    r = x;
+    g = c;
+  } else if (h < 180) {
+    g = c;
+    b = x;
+  } else if (h < 240) {
+    g = x;
+    b = c;
+  } else if (h < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  return rgbToHex(Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255));
 }
 
-// Generate color harmonies
 function generateHarmonies(hex: string): ColorHarmony {
   const rgb = hexToRgb(hex);
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
 
   const rotateHue = (h: number, deg: number) => (h + deg + 360) % 360;
-  const hslToHex = (h: number, s: number, l: number): string => {
-    s /= 100;
-    l /= 100;
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
-    let r = 0,
-      g = 0,
-      b = 0;
-    if (h < 60) {
-      r = c;
-      g = x;
-    } else if (h < 120) {
-      r = x;
-      g = c;
-    } else if (h < 180) {
-      g = c;
-      b = x;
-    } else if (h < 240) {
-      g = x;
-      b = c;
-    } else if (h < 300) {
-      r = x;
-      b = c;
-    } else {
-      r = c;
-      b = x;
-    }
-    return rgbToHex(
-      Math.round((r + m) * 255),
-      Math.round((g + m) * 255),
-      Math.round((b + m) * 255)
-    );
-  };
 
   const compHex = hslToHex(rotateHue(hsl.h, 180), hsl.s, hsl.l);
   const analog1 = hslToHex(rotateHue(hsl.h, 30), hsl.s, hsl.l);
@@ -383,7 +374,8 @@ function generateHarmonies(hex: string): ColorHarmony {
   const split2 = hslToHex(rotateHue(hsl.h, 210), hsl.s, hsl.l);
 
   const makeHarmony = (h: string, n: string) => {
-    const o = rgbToOklch(...(Object.values(hexToRgb(h)) as [number, number, number]));
+    const hRgb = hexToRgb(h);
+    const o = rgbToOklch(hRgb.r, hRgb.g, hRgb.b);
     return { hex: h, oklch: `oklch(${o.l * 100}% ${o.c} ${o.h})`, name: n };
   };
 
@@ -395,7 +387,6 @@ function generateHarmonies(hex: string): ColorHarmony {
   };
 }
 
-// CSS color names for naming
 const CSS_COLORS: Record<string, string> = {
   '#000000': 'black',
   '#FFFFFF': 'white',
@@ -413,6 +404,10 @@ const CSS_COLORS: Record<string, string> = {
   '#800080': 'purple',
   '#008080': 'teal',
   '#C0C0C0': 'silver',
+  '#FFA500': 'orange',
+  '#FFC0CB': 'pink',
+  '#A52A2A': 'brown',
+  '#F5F5DC': 'beige',
 };
 
 function findNearestColorName(hex: string): string {
@@ -439,16 +434,13 @@ function classifyTemperature(hue: number): 'warm' | 'cool' | 'neutral' {
   return 'neutral';
 }
 
-// K-means clustering for color extraction
 function kMeansColors(pixels: number[][], k: number = 5, maxIter: number = 50): number[][] {
   if (pixels.length === 0) return [];
   if (pixels.length <= k) return pixels;
 
-  // Initialize centroids randomly
   let centroids = pixels.slice(0, k).map((p) => [...p]);
 
   for (let iter = 0; iter < maxIter; iter++) {
-    // Assign pixels to nearest centroid
     const clusters: number[][][] = Array.from({ length: k }, () => []);
 
     for (const pixel of pixels) {
@@ -468,7 +460,6 @@ function kMeansColors(pixels: number[][], k: number = 5, maxIter: number = 50): 
       clusters[closest].push(pixel);
     }
 
-    // Update centroids
     const newCentroids = clusters.map((cluster, i) => {
       if (cluster.length === 0) return centroids[i];
       return [
@@ -478,7 +469,6 @@ function kMeansColors(pixels: number[][], k: number = 5, maxIter: number = 50): 
       ];
     });
 
-    // Check convergence
     const converged = centroids.every(
       (c, i) =>
         c[0] === newCentroids[i][0] && c[1] === newCentroids[i][1] && c[2] === newCentroids[i][2]
@@ -490,10 +480,7 @@ function kMeansColors(pixels: number[][], k: number = 5, maxIter: number = 50): 
   return centroids;
 }
 
-// Extract pixels from image buffer (simplified - in production use sharp/jimp)
 async function extractPixelsFromBuffer(buffer: Buffer): Promise<number[][]> {
-  // This is a simplified version - in production, use sharp or jimp
-  // For now, generate sample colors based on buffer content
   const pixels: number[][] = [];
   const step = Math.max(1, Math.floor(buffer.length / 1000));
 
@@ -504,7 +491,6 @@ async function extractPixelsFromBuffer(buffer: Buffer): Promise<number[][]> {
   return pixels;
 }
 
-// Generate export formats
 function generateExports(colors: ExtractedColor[]): ExportFormats {
   const cssVars = colors
     .map((c) => {
@@ -557,13 +543,12 @@ function generateExports(colors: ExtractedColor[]): ExportFormats {
   };
 }
 
-// Main extraction function
 export async function extractColorsFromImage(
   imageBuffer: Buffer,
   filename: string,
   options: { numColors?: number; includeBackground?: boolean; generateHarmonies?: boolean } = {}
 ): Promise<ColorPaletteResult> {
-  const { numColors = 5, includeBackground = true, generateHarmonies: genHarm = true } = options;
+  const { numColors = 5, generateHarmonies: genHarm = true } = options;
 
   // Stage 1: Segmentation (parallel)
   const [fgSegments, semSegments] = await Promise.all([
@@ -611,7 +596,6 @@ export async function extractColorsFromImage(
     };
   });
 
-  // Build segments info
   const segments: SegmentInfo = {
     foreground: { pixel_percentage: fgSegments.length > 0 ? 45 : 50 },
     background: { pixel_percentage: fgSegments.length > 0 ? 55 : 50 },
@@ -622,7 +606,7 @@ export async function extractColorsFromImage(
     id: `palette_${Date.now()}`,
     source_image: {
       filename,
-      dimensions: { width: 0, height: 0 }, // Would be extracted from image
+      dimensions: { width: 0, height: 0 },
       processed_at: new Date().toISOString(),
     },
     segments,
