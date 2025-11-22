@@ -1,3 +1,5 @@
+// apps/api/src/services/colorExtraction.ts
+
 import sharp from 'sharp';
 import type {
   ColorPaletteResult,
@@ -17,7 +19,13 @@ import {
 import { kMeansClusteringOklab } from './clustering';
 import { buildColorFormats, classifyTemperature } from './colorConversion';
 import { buildAccessibilityInfo } from './accessibility';
-import { getEnhancedColorName, findNearestPantone, generateCssVariableName } from './colorNaming';
+import {
+  getEnhancedColorName,
+  findNearestPantone,
+  generateCssVariableName,
+  doesColorMatchCategory,
+  type CategoryWithScore,
+} from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
 
@@ -47,7 +55,10 @@ function buildExtractedColor(
   const hsl = formats.hsl.values;
   const oklch = formats.oklch.values;
 
-  const colorName = getEnhancedColorName(rgb, category);
+  // Only use category prefix if the color actually matches the category expectation
+  const useCategory = doesColorMatchCategory(rgb, category) ? category : undefined;
+
+  const colorName = getEnhancedColorName(rgb, useCategory);
   const { tints, shades } = generateTintsAndShades(oklch, colorName);
   const harmony = genHarmonies ? generateHarmonies(oklch) : ({} as ColorHarmony);
   const accessibility = buildAccessibilityInfo(rgb);
@@ -58,7 +69,7 @@ function buildExtractedColor(
     name: colorName,
     source: {
       segment,
-      category,
+      category: useCategory || 'general',
       pixel_coverage: weight,
       confidence: segment === 'foreground' ? 0.85 + weight * 0.15 : 0.75 + weight * 0.15,
     },
@@ -101,9 +112,15 @@ export async function extractColorsFromImage(
   console.log('📊 Stage 1b: Semantic Segmentation (SegFormer)...');
   const segments = await segmentSemantic(imageBuffer);
 
+  // Build categories with scores for filtering
+  const categoriesWithScores: CategoryWithScore[] = segments.map((s) => ({
+    label: s.label,
+    score: s.score,
+  }));
+
   const categories = segments.map((s) => s.label).filter(Boolean);
   if (categories.length > 0) {
-    console.log(`   ✓ Identified ${categories.length} semantic regions`);
+    console.log(`   ✓ Identified ${categories.length} semantic regions: ${categories.join(', ')}`);
   }
 
   // ============================================

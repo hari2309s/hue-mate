@@ -31,7 +31,15 @@ export { kMeansClusteringOklab } from './clustering';
 export { buildAccessibilityInfo } from './accessibility';
 
 // Color naming
-export { getEnhancedColorName, findNearestPantone, generateCssVariableName } from './colorNaming';
+export {
+  getEnhancedColorName,
+  findNearestPantone,
+  generateCssVariableName,
+  filterRelevantCategories,
+  getBestCategoryForSegment,
+  doesColorMatchCategory,
+  type CategoryWithScore,
+} from './colorNaming';
 
 // Color harmony
 export {

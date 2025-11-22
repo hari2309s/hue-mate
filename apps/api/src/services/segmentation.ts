@@ -245,7 +245,8 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
 
 export async function extractPixels(
   imageBuffer: Buffer,
-  foregroundMask: ForegroundMask | null
+  foregroundMask: ForegroundMask | null,
+  _options: { logFallback?: boolean } = {}
 ): Promise<ExtractedPixels> {
   const pixels: PixelData[] = [];
   const isForeground: boolean[] = [];
