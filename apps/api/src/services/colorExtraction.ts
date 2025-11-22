@@ -12,7 +12,7 @@ import type {
   HSLValues,
 } from '@hue-und-you/types';
 
-const HF_API_URL = 'https://api-inference.huggingface.co/models';
+const HF_API_URL = 'https://router.huggingface.co/hf-inference';
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
 // ============================================
