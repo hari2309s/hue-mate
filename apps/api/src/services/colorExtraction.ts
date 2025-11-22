@@ -41,7 +41,7 @@ async function callHFInference(model: string, imageBuffer: Buffer): Promise<Segm
     throw new Error(`HF API error: ${response.status}`);
   }
 
-  return response.json();
+  return response.json() as unknown as SegmentationResult[];
 }
 
 // Stage 1a: Foreground/Background Segmentation
