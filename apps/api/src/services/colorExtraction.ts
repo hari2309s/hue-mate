@@ -24,7 +24,6 @@ import {
   findNearestPantone,
   generateCssVariableName,
   doesColorMatchCategory,
-  type CategoryWithScore,
 } from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
@@ -111,12 +110,6 @@ export async function extractColorsFromImage(
   // ============================================
   console.log('📊 Stage 1b: Semantic Segmentation (SegFormer)...');
   const segments = await segmentSemantic(imageBuffer);
-
-  // Build categories with scores for filtering
-  const categoriesWithScores: CategoryWithScore[] = segments.map((s) => ({
-    label: s.label,
-    score: s.score,
-  }));
 
   const categories = segments.map((s) => s.label).filter(Boolean);
   if (categories.length > 0) {
