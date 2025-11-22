@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
@@ -128,6 +129,12 @@ export type AppRouter = typeof appRouter;
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Log environment variables on startup (remove in production)
+console.log('🔧 Environment check:');
+console.log('   PORT:', PORT);
+console.log('   HF_API_KEY:', process.env.HUGGINGFACE_API_KEY ? '✓ Set' : '✗ Missing');
+console.log('   DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
@@ -138,5 +145,5 @@ app.get('/health', (_req, res) => {
 app.use('/trpc', createExpressMiddleware({ router: appRouter }));
 
 app.listen(PORT, () => {
-  console.log(`API server running on http://localhost:${PORT}`);
+  console.log(`🚀 API server running on http://localhost:${PORT}`);
 });
