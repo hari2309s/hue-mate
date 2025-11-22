@@ -279,16 +279,18 @@ const FileUploader = ({
 
                 <div className="flex items-center gap-2">
                   {getStatusIcon()}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => removeFile(index)}
-                    disabled={isBusy}
-                    className="rounded-full p-1.5 hover:bg-var(--muted) transition-colors disabled:opacity-50"
-                    aria-label={`Remove ${file.name}`}
-                  >
-                    <X className="h-4 w-4 text-var(--muted-foreground)" />
-                  </motion.button>
+                  {!isBusy && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => removeFile(index)}
+                      disabled={isBusy}
+                      className="rounded-full p-1.5 hover:bg-var(--muted) transition-colors disabled:opacity-50"
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      <X className="h-6 w-6 text-var(--muted-foreground) cursor-pointer hover:text-red-500" />
+                    </motion.button>
+                  )}
                 </div>
               </motion.div>
             ))}
