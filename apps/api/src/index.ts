@@ -10,7 +10,7 @@ import {
   processImageSchema,
   getResultSchema,
 } from '@hue-und-you/api-schema';
-import { extractColorsFromImage } from './services/colorExtraction';
+import { extractColorsFromImage } from './services/colorExtraction.js';
 import type { ColorPaletteResult, UploadStatus } from '@hue-und-you/types';
 
 // In-memory storage (replace with DB in production)
