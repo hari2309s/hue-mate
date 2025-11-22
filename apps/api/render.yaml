@@ -4,13 +4,13 @@ services:
     runtime: node
     region: frankfurt
     plan: starter
-    buildCommand: 'cd ../.. && pnpm install && pnpm build --filter=@hue-und-you/api'
+    buildCommand: 'pnpm install --no-frozen-lockfile && pnpm build --filter=@hue-und-you/api'
     startCommand: 'cd apps/api && node dist/index.js'
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3001
+        value: 10000
       - key: HUGGINGFACE_API_KEY
         sync: false
     healthCheckPath: /health
