@@ -1,7 +1,31 @@
-import { router, publicProcedure } from './trpc';
+import { z } from 'zod';
 
-export const appRouter = router({
-  health: publicProcedure.query(() => ({ status: 'ok' })),
+// Zod Schemas
+export const uploadImageSchema = z.object({
+  filename: z.string(),
+  contentType: z.string(),
+  base64Data: z.string(),
 });
 
-export type AppRouter = typeof appRouter;
+export const processImageSchema = z.object({
+  imageId: z.string(),
+  options: z
+    .object({
+      numColors: z.number().min(1).max(20).default(5),
+      includeBackground: z.boolean().default(true),
+      generateHarmonies: z.boolean().default(true),
+    })
+    .optional(),
+});
+
+export const getResultSchema = z.object({
+  imageId: z.string(),
+});
+
+// Export types inferred from schemas
+export type UploadImageInput = z.infer<typeof uploadImageSchema>;
+export type ProcessImageInput = z.infer<typeof processImageSchema>;
+export type GetResultInput = z.infer<typeof getResultSchema>;
+
+// Re-export trpc utilities
+export { router, publicProcedure } from './trpc';

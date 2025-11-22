@@ -1,7 +1,27 @@
 {
-  "extends": "../../packages/config/src/typescript/node.json",
   "compilerOptions": {
-    "rootDir": "./src"
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@hue-und-you/types": ["../../packages/types/src"],
+      "@hue-und-you/types/*": ["../../packages/types/src/*"],
+      "@hue-und-you/db": ["../../packages/db/src"],
+      "@hue-und-you/db/*": ["../../packages/db/src/*"],
+      "@hue-und-you/api-schema": ["../../packages/api-schema/src"],
+      "@hue-und-you/api-schema/*": ["../../packages/api-schema/src/*"]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
