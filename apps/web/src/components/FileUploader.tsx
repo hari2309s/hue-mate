@@ -179,11 +179,11 @@ const FileUploader = ({
         onDrop={handleDrop}
         animate={{
           scale: isDragging ? 1.02 : 1,
-          borderColor: isDragging ? 'var(--color-soft-orange)' : 'var(--border)',
+          borderColor: isDragging ? 'var(--color-soft-orange)' : 'var(--muted-foreground)',
           opacity: isBusy ? 0.7 : 1,
         }}
         transition={{ duration: 0.2 }}
-        className={`relative rounded-2xl border-2 border-dashed bg-var(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`relative rounded-2xl border border-dashed bg-var(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <input
           type="file"
