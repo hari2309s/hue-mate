@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && tsc-alias -p tsconfig.json",
     "clean": "tsc --build --clean && rm -rf dist",
     "db:push": "drizzle-kit push:pg",
     "db:migrate": "drizzle-kit migrate"
@@ -21,6 +21,7 @@
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
     "drizzle-kit": "^0.31.7",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3"
   },
   "type": "module",

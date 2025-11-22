@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && tsc-alias -p tsconfig.json",
     "clean": "tsc --build --clean && rm -rf dist",
     "type-check": "tsc --noEmit"
   },
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.9.3"
   },
   "type": "module",

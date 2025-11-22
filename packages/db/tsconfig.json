@@ -5,5 +5,9 @@
     "outDir": "./dist"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "migrations"]
+  "exclude": ["node_modules", "dist", "migrations"],
+  "tsc-alias": {
+    "resolveFullPaths": true,
+    "verbose": false
+  }
 }

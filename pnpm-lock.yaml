@@ -212,6 +212,9 @@ importers:
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -243,6 +246,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.7
         version: 0.31.7
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
