@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           {children}
           <ThemeSwitcher />
-          <Toaster richColors closeButton position="bottom-left" />
+          <Toaster richColors closeButton position="top-right" />
         </ThemeProvider>
       </body>
     </html>

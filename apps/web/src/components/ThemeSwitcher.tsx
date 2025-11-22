@@ -52,11 +52,11 @@ const ThemeSwitcher = () => {
   return (
     <motion.button
       onClick={cycleTheme}
-      className="fixed top-4 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-md bg-var(--card) shadow-lg border border-dashed border-var(--border) cursor-pointer overflow-hidden"
+      className="fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-md bg-var(--card) shadow-lg border border-dashed border-var(--border) cursor-pointer overflow-hidden"
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
-      initial={{ opacity: 0, y: 0 }}
-      animate={{ opacity: 1, y: 20 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       aria-label={
         isServer
