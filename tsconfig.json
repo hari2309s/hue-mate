@@ -1,15 +1,12 @@
 {
-  "extends": "/packages/config/src/typescript/base.json",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@hue-und-you/ui": ["packages/ui/src"],
-      "@hue-und-you/db": ["packages/db/src"],
-      "@hue-und-you/api-schema": ["packages/api-schema/src"],
-      "@hue-und-you/types": ["packages/types/src"],
-      "@hue-und-you/config": ["packages/config/src"]
-    }
-  },
-  "include": ["."],
-  "exclude": ["node_modules", "dist", "build"]
+  "files": [],
+  "references": [
+    { "path": "./apps/api" },
+    { "path": "./apps/web" },
+    { "path": "./packages/api-schema" },
+    { "path": "./packages/config" },
+    { "path": "./packages/db" },
+    { "path": "./packages/types" },
+    { "path": "./packages/ui" }
+  ]
 }

@@ -1,8 +1,6 @@
 {
   "extends": "../../packages/config/src/typescript/react.json",
   "compilerOptions": {
-    "jsx": "preserve",
-    "incremental": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
@@ -12,6 +10,6 @@
       "@hue-und-you/types": ["../../packages/types/src"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

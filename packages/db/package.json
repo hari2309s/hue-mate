@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -rf dist",
     "db:push": "drizzle-kit push:pg",
     "db:migrate": "drizzle-kit migrate"
   },

@@ -4,8 +4,8 @@
   "description": "",
   "main": "./dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
+    "build": "echo 'Config package does not need building'",
+    "clean": "echo 'Config package has no build output'",
     "type-check": "tsc --noEmit"
   },
   "keywords": [],
