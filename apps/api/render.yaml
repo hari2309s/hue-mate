@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: hue-und-you-api
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: 'cd ../.. && pnpm install && pnpm build --filter=@hue-und-you/api'
+    startCommand: 'cd apps/api && node dist/index.js'
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
