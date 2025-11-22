@@ -1,7 +1,0 @@
-{
-  "installCommand": "corepack enable && pnpm install",
-  "buildCommand": "pnpm build --filter=@hue-und-you/web",
-  "devCommand": "pnpm dev",
-  "framework": "nextjs",
-  "outputDirectory": ".next"
-}
