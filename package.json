@@ -20,8 +20,5 @@
     "prettier": "^3.6.2",
     "turbo": "^2.6.1",
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "types:workspace:*": "link:@hue-und-you/types:workspace:*"
   }
 }
