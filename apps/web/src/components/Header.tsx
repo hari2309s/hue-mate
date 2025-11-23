@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 const Header = () => {
   return (
@@ -9,11 +10,11 @@ const Header = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex justify-center items-center space-x-2 w-full"
+        whileHover={{ scale: 1.05 }}
+        className="flex flex-col justify-center items-center space-x-2 w-full"
       >
-        <motion.h1 className="text-3xl font-medium text-soft-orange" whileHover={{ scale: 1.05 }}>
-          hue-und-you
-        </motion.h1>
+        <Image src="/design.png" alt="Logo" width={28} height={28} />
+        <motion.h1 className="text-3xl font-medium text-soft-orange">hue-und-you</motion.h1>
       </motion.div>
     </header>
   );
