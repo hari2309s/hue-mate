@@ -177,6 +177,14 @@ export async function segmentForegroundBackground(
     }
     const foreground_percentage = (foregroundPixels / maskArray.length) * 100;
 
+    // Only return mask if there's actually foreground detected
+    if (foreground_percentage < 0.5) {
+      console.log(
+        `   ⚠ Foreground too small (${foreground_percentage.toFixed(1)}%), ignoring mask`
+      );
+      return null;
+    }
+
     // Convert to PNG buffer
     const finalMaskBuffer = await sharp(Buffer.from(maskArray), {
       raw: { width, height, channels: 1 },
@@ -295,24 +303,39 @@ export async function extractPixels(
 }
 
 // ============================================
-// SPLIT PIXELS BY LUMINANCE (fallback)
+// SPLIT PIXELS BY SATURATION (IMPROVED FALLBACK)
 // ============================================
 
-export function splitPixelsByLuminance(pixels: PixelData[]): {
+export function splitPixelsByLuminance(
+  pixels: PixelData[],
+  splitRatio: number = 0.3
+): {
   foreground: PixelData[];
   background: PixelData[];
 } {
-  const pixelsWithLum = pixels.map((p) => ({
-    ...p,
-    lum: 0.299 * p.r + 0.587 * p.g + 0.114 * p.b,
-  }));
+  // Use saturation primarily - foreground objects are typically more saturated
+  const pixelsWithScore = pixels.map((p) => {
+    const max = Math.max(p.r, p.g, p.b);
+    const min = Math.min(p.r, p.g, p.b);
+    const sat = max === 0 ? 0 : (max - min) / max;
+    const lum = 0.299 * p.r + 0.587 * p.g + 0.114 * p.b;
 
-  pixelsWithLum.sort((a, b) => b.lum - a.lum);
+    return {
+      ...p,
+      sat,
+      lum,
+      // Combine saturation and luminance variance for better split
+      score: sat * 0.7 + (Math.abs(lum - 128) / 255) * 0.3,
+    };
+  });
 
-  const splitPoint = Math.floor(pixels.length * 0.4);
+  // Sort by combined score (high saturation + varied luminance = likely foreground)
+  pixelsWithScore.sort((a, b) => b.score - a.score);
+
+  const splitPoint = Math.floor(pixels.length * splitRatio);
 
   return {
-    foreground: pixelsWithLum.slice(0, splitPoint).map(({ r, g, b }) => ({ r, g, b })),
-    background: pixelsWithLum.slice(splitPoint).map(({ r, g, b }) => ({ r, g, b })),
+    foreground: pixelsWithScore.slice(0, splitPoint).map(({ r, g, b }) => ({ r, g, b })),
+    background: pixelsWithScore.slice(splitPoint).map(({ r, g, b }) => ({ r, g, b })),
   };
 }

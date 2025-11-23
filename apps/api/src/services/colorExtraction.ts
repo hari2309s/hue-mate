@@ -1,5 +1,3 @@
-// apps/api/src/services/colorExtraction.ts
-
 import sharp from 'sharp';
 import type {
   ColorPaletteResult,
@@ -23,7 +21,7 @@ import {
   getEnhancedColorName,
   findNearestPantone,
   generateCssVariableName,
-  doesColorMatchCategory,
+  type CategoryWithScore,
 } from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
@@ -39,14 +37,14 @@ interface ExtractionOptions {
 }
 
 // ============================================
-// BUILD EXTRACTED COLOR
+// BUILD EXTRACTED COLOR (IMPROVED WITH CATEGORY VALIDATION)
 // ============================================
 
 function buildExtractedColor(
   rgb: RGBValues,
   weight: number,
   segment: 'foreground' | 'background',
-  category: string,
+  categories: CategoryWithScore[],
   index: number,
   genHarmonies: boolean
 ): ExtractedColor {
@@ -54,10 +52,31 @@ function buildExtractedColor(
   const hsl = formats.hsl.values;
   const oklch = formats.oklch.values;
 
-  // Only use category prefix if the color actually matches the category expectation
-  const useCategory = doesColorMatchCategory(rgb, category) ? category : undefined;
+  // Use improved naming that validates color-category match
+  const colorName = getEnhancedColorName(rgb, categories, segment);
 
-  const colorName = getEnhancedColorName(rgb, useCategory);
+  // Extract which category was actually used (if any)
+  const categoryPrefixes = [
+    'Sky',
+    'Ocean',
+    'Water',
+    'River',
+    'Lake',
+    'Leaf',
+    'Forest',
+    'Meadow',
+    'Floral',
+    'Sand',
+    'Frost',
+    'Alpine',
+  ];
+  const usedPrefix = categoryPrefixes.find((prefix) => colorName.startsWith(prefix));
+  const usedCategory = usedPrefix
+    ? categories.find(
+        (cat) => cat.label.toLowerCase() === usedPrefix.toLowerCase().replace('leaf', 'plant')
+      )
+    : null;
+
   const { tints, shades } = generateTintsAndShades(oklch, colorName);
   const harmony = genHarmonies ? generateHarmonies(oklch) : ({} as ColorHarmony);
   const accessibility = buildAccessibilityInfo(rgb);
@@ -68,7 +87,7 @@ function buildExtractedColor(
     name: colorName,
     source: {
       segment,
-      category: useCategory || 'general',
+      category: usedCategory?.label || 'general',
       pixel_coverage: weight,
       confidence: segment === 'foreground' ? 0.85 + weight * 0.15 : 0.75 + weight * 0.15,
     },
@@ -116,6 +135,12 @@ export async function extractColorsFromImage(
     console.log(`   ✓ Identified ${categories.length} semantic regions: ${categories.join(', ')}`);
   }
 
+  // Convert to CategoryWithScore format
+  const categoryScores: CategoryWithScore[] = segments.map((s) => ({
+    label: s.label,
+    score: s.score,
+  }));
+
   // ============================================
   // STAGE 2: IMAGE METADATA & PIXEL EXTRACTION
   // ============================================
@@ -131,9 +156,9 @@ export async function extractColorsFromImage(
   let fgPixels = pixels.filter((_, i) => isForeground[i]);
   let bgPixels = pixels.filter((_, i) => !isForeground[i]);
 
-  // If no proper separation, split by luminance
-  if (fgPixels.length === 0 || bgPixels.length === 0) {
-    console.log('   → No mask available, splitting by luminance...');
+  // If no proper separation, split by saturation/luminance
+  if (fgPixels.length === 0 || bgPixels.length === 0 || fgPixels.length < pixels.length * 0.05) {
+    console.log('   → No clear mask, splitting by saturation/luminance...');
     const split = splitPixelsByLuminance(pixels);
     fgPixels = split.foreground;
     bgPixels = split.background;
@@ -146,8 +171,10 @@ export async function extractColorsFromImage(
   // ============================================
   console.log('🔬 Stage 3: K-means Clustering in OKLCH space...');
 
-  const fgColorCount = Math.ceil(numColors * 0.6);
-  const bgColorCount = Math.floor(numColors * 0.4);
+  // Allocate colors proportionally to pixel distribution
+  const fgRatio = fgPixels.length / pixels.length;
+  const fgColorCount = Math.max(1, Math.round(numColors * fgRatio));
+  const bgColorCount = Math.max(1, numColors - fgColorCount);
 
   const dominantFgColors = fgPixels.length > 0 ? kMeansClusteringOklab(fgPixels, fgColorCount) : [];
   const dominantBgColors = bgPixels.length > 0 ? kMeansClusteringOklab(bgPixels, bgColorCount) : [];
@@ -164,21 +191,33 @@ export async function extractColorsFromImage(
   const palette: ExtractedColor[] = [];
   let colorIndex = 1;
 
-  // Process foreground colors
-  const fgCategory = segments[0]?.label || 'unknown';
+  // Process foreground colors - pass all categories for smart validation
   for (const colorData of dominantFgColors) {
     const rgb: RGBValues = { r: colorData.r, g: colorData.g, b: colorData.b };
     palette.push(
-      buildExtractedColor(rgb, colorData.weight, 'foreground', fgCategory, colorIndex++, genHarm)
+      buildExtractedColor(
+        rgb,
+        colorData.weight,
+        'foreground',
+        categoryScores,
+        colorIndex++,
+        genHarm
+      )
     );
   }
 
   // Process background colors
-  const bgCategory = segments[segments.length - 1]?.label || 'unknown';
   for (const colorData of dominantBgColors) {
     const rgb: RGBValues = { r: colorData.r, g: colorData.g, b: colorData.b };
     palette.push(
-      buildExtractedColor(rgb, colorData.weight, 'background', bgCategory, colorIndex++, genHarm)
+      buildExtractedColor(
+        rgb,
+        colorData.weight,
+        'background',
+        categoryScores,
+        colorIndex++,
+        genHarm
+      )
     );
   }
 
@@ -194,12 +233,12 @@ export async function extractColorsFromImage(
     foreground: {
       pixel_percentage: foregroundMask
         ? Math.round(foregroundMask.foreground_percentage * 10) / 10
-        : 50,
+        : Math.round(fgRatio * 1000) / 10,
     },
     background: {
       pixel_percentage: foregroundMask
         ? Math.round((100 - foregroundMask.foreground_percentage) * 10) / 10
-        : 50,
+        : Math.round((1 - fgRatio) * 1000) / 10,
     },
     categories,
   };
