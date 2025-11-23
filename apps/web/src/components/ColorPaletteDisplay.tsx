@@ -1,10 +1,17 @@
-// apps/web/src/components/ColorPaletteDisplay.tsx
-
 'use client';
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  Heart,
+  Palette,
+  Sparkles,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColorPaletteResult, ExtractedColor } from '@hue-und-you/types';
 
@@ -15,10 +22,12 @@ interface ColorPaletteDisplayProps {
 interface ColorCardProps {
   color: ExtractedColor;
   index: number;
+  allColors: ExtractedColor[];
 }
 
-const ColorCard = ({ color, index }: ColorCardProps) => {
+const ColorCard = ({ color, index, allColors }: ColorCardProps) => {
   const [expanded, setExpanded] = useState(false);
+  const [showAI, setShowAI] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   const copyToClipboard = async (text: string, label: string) => {
@@ -35,7 +44,6 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
     { label: 'OKLCH', value: color.formats.oklch.css },
   ];
 
-  // Temperature badge styles with proper contrast for both light and dark modes
   const getTemperatureBadgeClasses = (temp: string) => {
     switch (temp) {
       case 'warm':
@@ -47,10 +55,14 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
     }
   };
 
-  // Contrast badge styles
   const getContrastBadgeClasses = (passes: boolean) => {
     return passes ? 'bg-green-600 text-white' : 'bg-red-600 text-white';
   };
+
+  // Find paired colors
+  const pairedColors = color.usage?.pairs_well_with
+    ?.map((id) => allColors.find((c) => c.id === id))
+    .filter(Boolean);
 
   return (
     <motion.div
@@ -78,11 +90,22 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
       <div className="p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium text-var(--foreground)">{color.name}</h3>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-sm font-medium ${getTemperatureBadgeClasses(color.metadata.temperature)}`}
-          >
-            {color.metadata.temperature}
-          </span>
+          <div className="flex gap-1">
+            <span
+              className={`text-xs px-2 py-0.5 rounded-sm font-medium ${getTemperatureBadgeClasses(color.metadata.temperature)}`}
+            >
+              {color.metadata.temperature}
+            </span>
+            {color.usage && (
+              <button
+                onClick={() => setShowAI(!showAI)}
+                className="text-xs px-2 py-0.5 rounded-sm font-medium bg-purple-500 text-white hover:bg-purple-600 transition-colors flex items-center gap-1"
+              >
+                <Sparkles className="h-3 w-3" />
+                AI
+              </button>
+            )}
+          </div>
         </div>
 
         <p className="text-sm text-var(--muted-foreground) mb-3">{color.formats.hex}</p>
@@ -118,7 +141,77 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
           </span>
         </div>
 
-        {/* Expand/collapse */}
+        {/* AI-Enhanced Metadata */}
+        <AnimatePresence>
+          {showAI && (color.usage || color.mood) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mb-3 space-y-3 pt-3 border-t border-var(--border)"
+            >
+              {/* Usage Suggestions */}
+              {color.usage && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1 text-purple-500">
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Usage Suggestions</span>
+                  </div>
+                  <p className="text-xs text-var(--foreground) leading-relaxed">
+                    {color.usage.primary_use}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {color.usage.secondary_uses.map((use, i) => (
+                      <span
+                        key={i}
+                        className="text-xs px-2 py-0.5 rounded-full bg-var(--muted) text-var(--muted-foreground)"
+                      >
+                        {use}
+                      </span>
+                    ))}
+                  </div>
+                  {pairedColors && pairedColors.length > 0 && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-var(--muted-foreground)">Pairs well with:</span>
+                      <div className="flex gap-1">
+                        {pairedColors.map((paired) => (
+                          <div
+                            key={paired?.id}
+                            className="h-4 w-4 rounded-full border border-var(--border)"
+                            style={{ backgroundColor: paired?.formats.hex }}
+                            title={paired?.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mood/Emotion */}
+              {color.mood && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1 text-pink-500">
+                    <Heart className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Emotion</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200 font-medium">
+                      {color.mood.emotion}
+                    </span>
+                    {color.mood.associations.map((assoc, i) => (
+                      <span key={i} className="text-xs text-var(--muted-foreground)">
+                        {assoc}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Expand/collapse tints & shades */}
         <button
           onClick={() => setExpanded(!expanded)}
           className="w-full flex items-center justify-center gap-1 text-xs text-var(--muted-foreground) hover:text-var(--foreground) transition-colors cursor-pointer"
@@ -187,6 +280,41 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
 
   return (
     <div className="w-full max-w-4xl mx-auto mt-8">
+      {/* AI-Generated Palette Description */}
+      {result.description && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-6 rounded-md border border-purple-200 bg-linear-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 dark:border-purple-800"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Palette className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="text-lg font-medium text-purple-900 dark:text-purple-100">
+              AI Palette Analysis
+            </h3>
+          </div>
+          <p className="text-sm text-purple-800 dark:text-purple-200 leading-relaxed mb-3">
+            {result.description.palette_description}
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Mood:</span>
+            <span className="text-xs text-purple-600 dark:text-purple-400">
+              {result.description.mood}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {result.description.best_for.map((use, i) => (
+              <span
+                key={i}
+                className="text-xs px-2 py-1 rounded-sm bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200"
+              >
+                {use}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <h2 className="text-2xl font-medium text-var(--foreground) mb-2">Extracted Palette</h2>
         <p className="text-var(--muted-foreground)">
@@ -197,7 +325,7 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
       {/* Color grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {result.palette.map((color, index) => (
-          <ColorCard key={color.id} color={color} index={index} />
+          <ColorCard key={color.id} color={color} index={index} allColors={result.palette} />
         ))}
       </div>
 

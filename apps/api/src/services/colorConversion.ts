@@ -229,13 +229,3 @@ export function buildColorFormats(rgb: RGBValues): ColorFormats {
     lch: { css: `lch(${lch.l} ${lch.c} ${lch.h})`, values: lch },
   };
 }
-
-// ============================================
-// Temperature Classification
-// ============================================
-
-export function classifyTemperature(hue: number): 'warm' | 'cool' | 'neutral' {
-  if ((hue >= 0 && hue <= 60) || (hue >= 300 && hue <= 360)) return 'warm';
-  if (hue >= 120 && hue <= 240) return 'cool';
-  return 'neutral';
-}

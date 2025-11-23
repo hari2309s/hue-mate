@@ -15,16 +15,22 @@ import {
   splitPixelsByLuminance,
 } from './segmentation';
 import { kMeansClusteringOklab } from './clustering';
-import { buildColorFormats, classifyTemperature } from './colorConversion';
+import { buildColorFormats } from './colorConversion';
 import { buildAccessibilityInfo } from './accessibility';
-import {
-  getEnhancedColorName,
-  findNearestPantone,
-  generateCssVariableName,
-  type CategoryWithScore,
-} from './colorNaming';
+import { findNearestPantone, generateCssVariableName, type CategoryWithScore } from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
+import {
+  getContextualColorName,
+  getBaseColorName,
+  isOllamaAvailable,
+} from './colorContextDetection';
+import {
+  generateColorUsageSuggestion,
+  generateColorMood,
+  generatePaletteDescription,
+  classifyColorTemperature,
+} from './aiEnhancedMetadata';
 
 // ============================================
 // EXTRACTION OPTIONS
@@ -37,57 +43,54 @@ interface ExtractionOptions {
 }
 
 // ============================================
-// BUILD EXTRACTED COLOR (IMPROVED WITH CATEGORY VALIDATION)
+// BUILD EXTRACTED COLOR (FULLY AI-POWERED)
 // ============================================
 
-function buildExtractedColor(
+async function buildExtractedColor(
+  imageBase64: string,
   rgb: RGBValues,
   weight: number,
   segment: 'foreground' | 'background',
   categories: CategoryWithScore[],
   index: number,
-  genHarmonies: boolean
-): ExtractedColor {
+  genHarmonies: boolean,
+  useOllama: boolean,
+  _allColors: ExtractedColor[] // For pairing suggestions
+): Promise<ExtractedColor> {
   const formats = buildColorFormats(rgb);
   const hsl = formats.hsl.values;
   const oklch = formats.oklch.values;
 
-  // Use improved naming that validates color-category match
-  const colorName = getEnhancedColorName(rgb, categories, segment);
+  let colorName: string;
+  let usedCategory: string;
 
-  // Extract which category was actually used (if any)
-  const categoryPrefixes = [
-    'Sky',
-    'Ocean',
-    'Water',
-    'River',
-    'Lake',
-    'Leaf',
-    'Forest',
-    'Meadow',
-    'Floral',
-    'Sand',
-    'Frost',
-    'Alpine',
-  ];
-  const usedPrefix = categoryPrefixes.find((prefix) => colorName.startsWith(prefix));
-  const usedCategory = usedPrefix
-    ? categories.find(
-        (cat) => cat.label.toLowerCase() === usedPrefix.toLowerCase().replace('leaf', 'plant')
-      )
-    : null;
+  // AI-powered contextual naming
+  if (useOllama && categories.length > 0) {
+    const result = await getContextualColorName(imageBase64, rgb, categories);
+    colorName = result.name;
+    usedCategory = result.category;
+  } else {
+    colorName = getBaseColorName(rgb);
+    usedCategory = 'general';
+  }
 
   const { tints, shades } = generateTintsAndShades(oklch, colorName);
   const harmony = genHarmonies ? generateHarmonies(oklch) : ({} as ColorHarmony);
   const accessibility = buildAccessibilityInfo(rgb);
   const pantone = findNearestPantone(rgb);
 
-  return {
+  // AI-powered temperature classification
+  const temperature = useOllama
+    ? await classifyColorTemperature(imageBase64, rgb, colorName)
+    : fallbackTemperature(hsl.h);
+
+  // Create base color object
+  const color: ExtractedColor = {
     id: `color_${String(index).padStart(3, '0')}`,
     name: colorName,
     source: {
       segment,
-      category: usedCategory?.label || 'general',
+      category: usedCategory,
       pixel_coverage: weight,
       confidence: segment === 'foreground' ? 0.85 + weight * 0.15 : 0.75 + weight * 0.15,
     },
@@ -97,16 +100,27 @@ function buildExtractedColor(
     shades,
     harmony,
     metadata: {
-      temperature: classifyTemperature(hsl.h),
+      temperature,
       nearest_css_color: colorName.toLowerCase(),
       pantone_approximation: pantone,
       css_variable_name: generateCssVariableName(colorName),
     },
   };
+
+  return color;
+}
+
+/**
+ * Fallback temperature (simple hue-based)
+ */
+function fallbackTemperature(hue: number): 'warm' | 'cool' | 'neutral' {
+  if ((hue >= 0 && hue <= 60) || (hue >= 300 && hue <= 360)) return 'warm';
+  if (hue >= 120 && hue <= 240) return 'cool';
+  return 'neutral';
 }
 
 // ============================================
-// MAIN EXTRACTION PIPELINE
+// MAIN EXTRACTION PIPELINE (FULLY AI-POWERED)
 // ============================================
 
 export async function extractColorsFromImage(
@@ -116,18 +130,24 @@ export async function extractColorsFromImage(
 ): Promise<ColorPaletteResult> {
   const { numColors = 5, generateHarmonies: genHarm = true } = options;
 
-  console.log('🎨 Starting Enhanced ML Color Extraction Pipeline...');
+  console.log('🎨 Starting AI-Powered Color Extraction Pipeline...');
+
+  // Check if Ollama is available
+  const ollamaAvailable = await isOllamaAvailable();
+  if (ollamaAvailable) {
+    console.log('   ✓ Ollama AI available - full AI-powered mode enabled');
+  } else {
+    console.log('   ⚠ Ollama not available - using basic mode');
+    console.log('   → Enable AI features: ollama pull llava-phi3');
+  }
 
   // ============================================
-  // STAGE 1a: FOREGROUND/BACKGROUND SEGMENTATION
+  // STAGE 1: SEGMENTATION
   // ============================================
   console.log('📐 Stage 1a: Foreground/Background Segmentation...');
   const foregroundMask = await segmentForegroundBackground(imageBuffer);
 
-  // ============================================
-  // STAGE 1b: SEMANTIC SEGMENTATION
-  // ============================================
-  console.log('📊 Stage 1b: Semantic Segmentation (SegFormer)...');
+  console.log('📊 Stage 1b: Semantic Segmentation...');
   const segments = await segmentSemantic(imageBuffer);
 
   const categories = segments.map((s) => s.label).filter(Boolean);
@@ -135,43 +155,35 @@ export async function extractColorsFromImage(
     console.log(`   ✓ Identified ${categories.length} semantic regions: ${categories.join(', ')}`);
   }
 
-  // Convert to CategoryWithScore format
   const categoryScores: CategoryWithScore[] = segments.map((s) => ({
     label: s.label,
     score: s.score,
   }));
 
   // ============================================
-  // STAGE 2: IMAGE METADATA & PIXEL EXTRACTION
+  // STAGE 2: PIXEL EXTRACTION
   // ============================================
-  console.log('🎯 Stage 2: Pixel Extraction with Segmentation...');
+  console.log('🎯 Stage 2: Pixel Extraction...');
   const image = sharp(imageBuffer);
   const metadata = await image.metadata();
-  console.log(`   ✓ Image: ${metadata.width}x${metadata.height} (${metadata.format})`);
 
   const { pixels, isForeground } = await extractPixels(imageBuffer, foregroundMask);
   console.log(`   ✓ Sampled ${pixels.length} pixels`);
 
-  // Separate foreground and background pixels
   let fgPixels = pixels.filter((_, i) => isForeground[i]);
   let bgPixels = pixels.filter((_, i) => !isForeground[i]);
 
-  // If no proper separation, split by saturation/luminance
   if (fgPixels.length === 0 || bgPixels.length === 0 || fgPixels.length < pixels.length * 0.05) {
-    console.log('   → No clear mask, splitting by saturation/luminance...');
     const split = splitPixelsByLuminance(pixels);
     fgPixels = split.foreground;
     bgPixels = split.background;
   }
 
-  console.log(`   ✓ Foreground: ${fgPixels.length} pixels, Background: ${bgPixels.length} pixels`);
-
   // ============================================
-  // STAGE 3: COLOR EXTRACTION (K-MEANS IN OKLCH)
+  // STAGE 3: COLOR CLUSTERING
   // ============================================
   console.log('🔬 Stage 3: K-means Clustering in OKLCH space...');
 
-  // Allocate colors proportionally to pixel distribution
   const fgRatio = fgPixels.length / pixels.length;
   const fgColorCount = Math.max(1, Math.round(numColors * fgRatio));
   const bgColorCount = Math.max(1, numColors - fgColorCount);
@@ -184,49 +196,87 @@ export async function extractColorsFromImage(
   );
 
   // ============================================
-  // STAGE 4: COLOR NAMING & ENRICHMENT
+  // STAGE 4: AI-POWERED COLOR NAMING
   // ============================================
-  console.log('🏷️  Stage 4: Enhanced Color Naming & Metadata...');
+  console.log('🏷️  Stage 4: AI-Powered Color Naming...');
 
+  const imageBase64 = imageBuffer.toString('base64');
   const palette: ExtractedColor[] = [];
   let colorIndex = 1;
 
-  // Process foreground colors - pass all categories for smart validation
+  // Process foreground colors
   for (const colorData of dominantFgColors) {
     const rgb: RGBValues = { r: colorData.r, g: colorData.g, b: colorData.b };
-    palette.push(
-      buildExtractedColor(
-        rgb,
-        colorData.weight,
-        'foreground',
-        categoryScores,
-        colorIndex++,
-        genHarm
-      )
+    const color = await buildExtractedColor(
+      imageBase64,
+      rgb,
+      colorData.weight,
+      'foreground',
+      categoryScores,
+      colorIndex++,
+      genHarm,
+      ollamaAvailable,
+      palette
     );
+    palette.push(color);
   }
 
   // Process background colors
   for (const colorData of dominantBgColors) {
     const rgb: RGBValues = { r: colorData.r, g: colorData.g, b: colorData.b };
-    palette.push(
-      buildExtractedColor(
-        rgb,
-        colorData.weight,
-        'background',
-        categoryScores,
-        colorIndex++,
-        genHarm
-      )
+    const color = await buildExtractedColor(
+      imageBase64,
+      rgb,
+      colorData.weight,
+      'background',
+      categoryScores,
+      colorIndex++,
+      genHarm,
+      ollamaAvailable,
+      palette
     );
+    palette.push(color);
   }
 
-  console.log('   ✓ Generated enhanced palette with context-aware names');
+  // ============================================
+  // STAGE 5: AI-ENHANCED METADATA (NEW!)
+  // ============================================
+  if (ollamaAvailable) {
+    console.log('✨ Stage 5: Generating AI-Enhanced Metadata...');
+
+    // Generate usage suggestions and mood for each color
+    for (const color of palette) {
+      console.log(`   → Analyzing "${color.name}"...`);
+
+      const [usage, mood] = await Promise.all([
+        generateColorUsageSuggestion(imageBase64, color, palette),
+        generateColorMood(imageBase64, color),
+      ]);
+
+      if (usage) (color as any).usage = usage;
+      if (mood) (color as any).mood = mood;
+    }
+
+    console.log('   ✓ Generated usage suggestions and mood analysis');
+  }
 
   // ============================================
-  // STAGE 5: EXPORT GENERATION
+  // STAGE 6: PALETTE-LEVEL DESCRIPTION (NEW!)
   // ============================================
-  console.log('📦 Stage 5: Generating exports...');
+  let paletteDescription = undefined;
+
+  if (ollamaAvailable) {
+    console.log('📝 Stage 6: Generating Palette Description...');
+    paletteDescription = await generatePaletteDescription(imageBase64, palette, filename);
+    if (paletteDescription) {
+      console.log(`   ✓ "${paletteDescription.palette_description.slice(0, 60)}..."`);
+    }
+  }
+
+  // ============================================
+  // STAGE 7: EXPORT GENERATION
+  // ============================================
+  console.log('📦 Stage 7: Generating exports...');
   const exports = generateExports(palette);
 
   const segmentInfo: SegmentInfo = {
@@ -243,7 +293,7 @@ export async function extractColorsFromImage(
     categories,
   };
 
-  console.log('✨ Enhanced Pipeline Complete!');
+  console.log('✨ AI-Powered Pipeline Complete!');
   console.log(`   Colors: ${palette.map((c) => c.name).join(', ')}`);
 
   return {
@@ -256,5 +306,6 @@ export async function extractColorsFromImage(
     segments: segmentInfo,
     palette,
     exports,
+    description: paletteDescription,
   };
 }

@@ -119,6 +119,8 @@ export interface ExtractedColor {
   shades: TintShade[];
   harmony: ColorHarmony;
   metadata: ColorMetadata;
+  usage?: ColorUsageSuggestion;
+  mood?: ColorMood;
 }
 
 // Segmentation Info
@@ -149,6 +151,7 @@ export interface ColorPaletteResult {
   segments: SegmentInfo;
   palette: ExtractedColor[];
   exports: ExportFormats;
+  description?: ColorDescription | null;
 }
 
 // Upload Status
@@ -205,4 +208,28 @@ export interface ProcessImageInput {
     includeBackground?: boolean;
     generateHarmonies?: boolean;
   };
+}
+
+// ============================================
+// AI-ENHANCED METADATA TYPES (ADD THESE)
+// ============================================
+
+export interface ColorUsageSuggestion {
+  primary_use: string;
+  secondary_uses: string[];
+  avoid_for: string[];
+  pairs_well_with: string[]; // Array of color IDs
+  examples: string;
+}
+
+export interface ColorMood {
+  emotion: string;
+  associations: string[];
+  cultural_notes?: string;
+}
+
+export interface ColorDescription {
+  palette_description: string;
+  mood: string;
+  best_for: string[];
 }

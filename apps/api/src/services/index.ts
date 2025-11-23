@@ -21,7 +21,6 @@ export {
   rgbToLab,
   labToLch,
   buildColorFormats,
-  classifyTemperature,
 } from './colorConversion';
 
 // Clustering
@@ -31,15 +30,7 @@ export { kMeansClusteringOklab } from './clustering';
 export { buildAccessibilityInfo } from './accessibility';
 
 // Color naming
-export {
-  getEnhancedColorName,
-  findNearestPantone,
-  generateCssVariableName,
-  filterRelevantCategories,
-  getBestCategoryForSegment,
-  doesColorMatchCategory,
-  type CategoryWithScore,
-} from './colorNaming';
+export { findNearestPantone, generateCssVariableName, type CategoryWithScore } from './colorNaming';
 
 // Color harmony
 export {

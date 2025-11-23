@@ -1,6 +1,4 @@
-import namer from 'color-namer';
 import type { RGBValues } from '@hue-und-you/types';
-import { rgbToHex } from './colorConversion';
 
 // ============================================
 // PANTONE COLOR DATABASE (subset)
@@ -38,165 +36,12 @@ const PANTONE_COLORS = [
 ];
 
 // ============================================
-// CATEGORY PREFIXES (Only use for distinctive categories)
-// ============================================
-
-const CATEGORY_PREFIXES: Record<string, string> = {
-  sky: 'Sky',
-  sea: 'Ocean',
-  water: 'Water',
-  river: 'River',
-  lake: 'Lake',
-  plant: 'Leaf',
-  tree: 'Forest',
-  grass: 'Meadow',
-  flower: 'Floral',
-  sand: 'Sand',
-  snow: 'Frost',
-  mountain: 'Alpine',
-  // Removed wall, building, etc. - too generic
-};
-
-// Categories where color is highly predictive
-const COLOR_PREDICTIVE_CATEGORIES = new Set([
-  'sky',
-  'water',
-  'sea',
-  'river',
-  'lake',
-  'grass',
-  'tree',
-  'plant',
-  'snow',
-  'sand',
-  'mountain',
-]);
-
-// Minimum coverage threshold for a category to be used in naming (percentage)
-const MIN_CATEGORY_COVERAGE = 5;
-
-// ============================================
-// CATEGORY WITH SCORE TYPE
+// CATEGORY WITH SCORE TYPE (for semantic segmentation)
 // ============================================
 
 export interface CategoryWithScore {
   label: string;
   score: number;
-}
-
-// ============================================
-// FILTER RELEVANT CATEGORIES
-// ============================================
-
-export function filterRelevantCategories(
-  categories: CategoryWithScore[],
-  minCoverage: number = MIN_CATEGORY_COVERAGE
-): CategoryWithScore[] {
-  return categories
-    .filter((cat) => cat.score * 100 >= minCoverage)
-    .sort((a, b) => b.score - a.score);
-}
-
-// ============================================
-// CHECK IF COLOR MATCHES CATEGORY EXPECTATION (STRICTER)
-// ============================================
-
-export function doesColorMatchCategory(rgb: RGBValues, category: string): boolean {
-  const { r, g, b } = rgb;
-  const normalizedCategory = category.toLowerCase();
-
-  const brightness = (r + g + b) / 3;
-  const maxChannel = Math.max(r, g, b);
-  const minChannel = Math.min(r, g, b);
-  const saturation = maxChannel === 0 ? 0 : (maxChannel - minChannel) / maxChannel;
-
-  switch (normalizedCategory) {
-    case 'sky':
-      // Sky: blue (day) OR very dark (night) OR very light (overcast)
-      return (
-        (b > r * 1.1 && b > g * 0.9) || // Blue sky
-        brightness > 180 || // Bright/white sky
-        (brightness < 50 && saturation < 0.4) // Night sky
-      );
-
-    case 'water':
-    case 'sea':
-    case 'river':
-    case 'lake':
-      // Water: blue/cyan/teal or dark reflective
-      return (
-        b > r || // Blue water
-        (g > r && b > r * 0.8) || // Cyan/teal water
-        (brightness < 100 && saturation < 0.3) // Dark reflective water
-      );
-
-    case 'grass':
-    case 'plant':
-      // Green vegetation (must be green)
-      return g >= r * 1.1 && g >= b * 1.1;
-
-    case 'tree':
-    case 'forest':
-      // Green OR brown
-      return (
-        (g >= r * 1.05 && g >= b * 1.05) || // Slightly more lenient green
-        (r > g * 0.8 && g > b * 1.1 && r < 200 && saturation > 0.1) // Brown
-      );
-
-    case 'sand':
-    case 'earth':
-      // Warm tan/brown, moderate saturation
-      return r >= g * 0.8 && g >= b * 0.9 && saturation < 0.5 && brightness > 100;
-
-    case 'snow':
-    case 'frost':
-      // Very light, desaturated
-      return brightness > 180 && saturation < 0.2;
-
-    case 'mountain':
-    case 'alpine':
-      // Gray/brown tones, moderate brightness
-      return saturation < 0.4 && brightness > 60 && brightness < 180;
-
-    default:
-      // Unknown categories don't get prefixes
-      return false;
-  }
-}
-
-// ============================================
-// GET BEST CATEGORY FOR COLOR (COLOR + SEGMENT AWARE)
-// ============================================
-
-export function getBestCategoryForColor(
-  rgb: RGBValues,
-  categories: CategoryWithScore[],
-  _segment: 'foreground' | 'background'
-): string | undefined {
-  const relevant = filterRelevantCategories(categories, MIN_CATEGORY_COVERAGE);
-
-  if (relevant.length === 0) {
-    return undefined;
-  }
-
-  // Filter to categories where the color actually matches expectations
-  const matchingCategories = relevant.filter((cat) => doesColorMatchCategory(rgb, cat.label));
-
-  if (matchingCategories.length === 0) {
-    return undefined;
-  }
-
-  // Prioritize color-predictive categories (sky, water, grass, etc)
-  const colorPredictive = matchingCategories.find((cat) =>
-    COLOR_PREDICTIVE_CATEGORIES.has(cat.label.toLowerCase())
-  );
-
-  if (colorPredictive) {
-    return colorPredictive.label;
-  }
-
-  // Otherwise return highest scoring matching category
-  return matchingCategories[0].label;
 }
 
 // ============================================
@@ -224,59 +69,9 @@ export function findNearestPantone(rgb: RGBValues): string {
 }
 
 // ============================================
-// ENHANCED COLOR NAMING WITH BETTER CATEGORY LOGIC
-// ============================================
-
-export function getEnhancedColorName(
-  rgb: RGBValues,
-  categories: CategoryWithScore[],
-  segment: 'foreground' | 'background'
-): string {
-  const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
-
-  // Use color-namer for rich naming
-  const names = namer(hex);
-
-  // Prioritize NTC names (most descriptive), fallback to basic
-  const ntcName = names.ntc[0]?.name || '';
-  const basicName = names.basic[0]?.name || '';
-  const bestName = ntcName || basicName || 'Unknown';
-
-  // Clean up the name (capitalize properly)
-  const cleanName = bestName
-    .split(' ')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-
-  // Try to get best matching category for this specific color
-  const category = getBestCategoryForColor(rgb, categories, segment);
-
-  // Only add prefix if we have a valid category match
-  if (category && CATEGORY_PREFIXES[category.toLowerCase()]) {
-    return `${CATEGORY_PREFIXES[category.toLowerCase()]} ${cleanName}`;
-  }
-
-  return cleanName;
-}
-
-// ============================================
 // GENERATE CSS VARIABLE NAME
 // ============================================
 
 export function generateCssVariableName(colorName: string): string {
   return `--color-${colorName.toLowerCase().replace(/\s+/g, '-')}`;
-}
-
-// ============================================
-// LEGACY EXPORTS FOR BACKWARD COMPATIBILITY
-// ============================================
-
-// These are kept for any code that might still use them
-export function getBestCategoryForSegment(
-  categories: CategoryWithScore[],
-  _segment: 'foreground' | 'background'
-): string {
-  const relevant = filterRelevantCategories(categories);
-  if (relevant.length === 0) return 'unknown';
-  return relevant[0].label;
 }
