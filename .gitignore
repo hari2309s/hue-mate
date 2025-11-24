@@ -34,3 +34,5 @@ Thumbs.db
 **/*.d.ts
 **/*.map
 **/*.tsbuildinfo
+.env.local
+.env
