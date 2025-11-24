@@ -2,9 +2,10 @@ import namer from 'color-namer';
 import type { RGBValues } from '@hue-und-you/types';
 import type { CategoryWithScore } from './colorNaming';
 import { rgbToHex } from './colorConversion';
-
-const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llava-phi3';
+import {
+  generateOllamaResponse,
+  isOllamaAvailable as checkOllamaAvailable,
+} from './ollamaCloudClient';
 
 // Cache to avoid repeated calls
 const contextCache = new Map<string, string>();
@@ -58,7 +59,6 @@ export function getBaseColorName(rgb: RGBValues): string {
   const basicName = names.basic[0]?.name || '';
   const bestName = ntcName || basicName || 'Unknown';
 
-  // Clean up the name
   return bestName
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -67,7 +67,6 @@ export function getBaseColorName(rgb: RGBValues): string {
 
 /**
  * Ask Ollama to provide semantic prefix for a color
- * This is the ONLY place we interact with categories - no hardcoding!
  */
 export async function getSemanticPrefixFromOllama(
   imageBase64: string,
@@ -77,7 +76,6 @@ export async function getSemanticPrefixFromOllama(
 ): Promise<string | null> {
   const cacheKey = getCacheKey(rgb, baseName);
 
-  // Check cache
   if (contextCache.has(cacheKey)) {
     console.log(`   ✓ Cache hit for ${baseName}`);
     return contextCache.get(cacheKey)!;
@@ -119,34 +117,26 @@ Reply with ONLY the prefix word:`;
 
     console.log(`   → Asking Ollama for semantic prefix of "${baseName}"...`);
 
-    const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        images: [imageBase64],
-        stream: false,
-        options: {
-          temperature: 0.1,
-          num_predict: 5,
-          top_k: 3,
-          top_p: 0.3,
-        },
-      }),
+    const response = await generateOllamaResponse({
+      model: '', // Model is set in the client
+      prompt,
+      images: [imageBase64],
+      options: {
+        temperature: 0.1,
+        num_predict: 5,
+        top_k: 3,
+        top_p: 0.3,
+      },
     });
 
-    if (!response.ok) {
-      console.log(`   ✗ Ollama request failed: ${response.status}`);
+    if (!response) {
+      console.log(`   ✗ Ollama request failed`);
       return null;
     }
 
-    const data = (await response.json()) as { response: string };
-    const answer = data.response.trim().toLowerCase();
-
+    const answer = response.response.trim().toLowerCase();
     console.log(`   ✓ Ollama response: "${answer}"`);
 
-    // Parse the response - look for valid prefix keywords
     const validPrefixes = [
       'sky',
       'forest',
@@ -159,9 +149,7 @@ Reply with ONLY the prefix word:`;
       'leaf',
     ];
 
-    // Find matching prefix
     let matchedPrefix: string | null = null;
-
     for (const prefix of validPrefixes) {
       if (answer.includes(prefix)) {
         matchedPrefix = prefix.charAt(0).toUpperCase() + prefix.slice(1);
@@ -169,7 +157,6 @@ Reply with ONLY the prefix word:`;
       }
     }
 
-    // Check for "none" response
     if (answer.includes('none') || answer.includes('no ') || !matchedPrefix) {
       console.log(`   → No clear semantic context, using base name only`);
       contextCache.set(cacheKey, 'none');
@@ -186,20 +173,16 @@ Reply with ONLY the prefix word:`;
 }
 
 /**
- * Get complete color name with semantic context (ZERO HARDCODING)
+ * Get complete color name with semantic context
  */
 export async function getContextualColorName(
   imageBase64: string,
   rgb: RGBValues,
   categories: CategoryWithScore[]
 ): Promise<{ name: string; category: string }> {
-  // Step 1: Get base color name from color-namer
   const baseName = getBaseColorName(rgb);
-
-  // Step 2: Ask Ollama for semantic prefix
   const prefix = await getSemanticPrefixFromOllama(imageBase64, rgb, baseName, categories);
 
-  // Step 3: Combine
   if (prefix) {
     return {
       name: `${prefix} ${baseName}`,
@@ -217,36 +200,7 @@ export async function getContextualColorName(
  * Check if Ollama is available
  */
 export async function isOllamaAvailable(): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-    const response = await fetch(`${OLLAMA_API_URL}/api/tags`, {
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      return false;
-    }
-
-    const data = (await response.json()) as { models: Array<{ name: string }> };
-    const models = data.models || [];
-    const hasModel = models.some((m: any) => m.name.includes(OLLAMA_MODEL.split(':')[0]));
-
-    if (!hasModel) {
-      console.log(`   ⚠ Ollama running but ${OLLAMA_MODEL} not found`);
-      console.log(`   → Run: ollama pull ${OLLAMA_MODEL}`);
-    }
-
-    return hasModel;
-  } catch (error) {
-    if ((error as any).name === 'AbortError') {
-      console.log('   ⚠ Ollama connection timeout');
-    }
-    return false;
-  }
+  return checkOllamaAvailable();
 }
 
 /**

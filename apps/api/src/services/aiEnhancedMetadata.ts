@@ -1,7 +1,5 @@
 import type { ExtractedColor, RGBValues } from '@hue-und-you/types';
-
-const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llava-phi3';
+import { generateOllamaResponse } from './ollamaCloudClient';
 
 interface ColorUsageSuggestion {
   primary_use: string;
@@ -59,32 +57,25 @@ Format as JSON:
 
 JSON only:`;
 
-    const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        images: [imageBase64],
-        stream: false,
-        options: { temperature: 0.3, num_predict: 200 },
-      }),
+    const response = await generateOllamaResponse({
+      model: '',
+      prompt,
+      images: [imageBase64],
+      options: { temperature: 0.3, num_predict: 200 },
     });
 
-    if (!response.ok) return null;
+    if (!response) return null;
 
-    const data = (await response.json()) as { response: string };
-    const jsonText = data.response
+    const jsonText = response.response
       .trim()
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '');
     const parsed = JSON.parse(jsonText);
 
-    // Determine which colors pair well (based on contrast and harmony)
+    // Determine which colors pair well
     const pairsWellWith = allColors
       .filter((c) => c.id !== color.id)
       .filter((c) => {
-        // Simple heuristic: good contrast or complementary
         const colorLuminance =
           (0.299 * color.formats.rgb.values.r +
             0.587 * color.formats.rgb.values.g +
@@ -142,22 +133,16 @@ Format as JSON:
 
 JSON only:`;
 
-    const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        images: [imageBase64],
-        stream: false,
-        options: { temperature: 0.4, num_predict: 150 },
-      }),
+    const response = await generateOllamaResponse({
+      model: '',
+      prompt,
+      images: [imageBase64],
+      options: { temperature: 0.4, num_predict: 150 },
     });
 
-    if (!response.ok) return null;
+    if (!response) return null;
 
-    const data = (await response.json()) as { response: string };
-    const jsonText = data.response
+    const jsonText = response.response
       .trim()
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '');
@@ -207,22 +192,16 @@ Format as JSON:
 
 JSON only:`;
 
-    const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        images: [imageBase64],
-        stream: false,
-        options: { temperature: 0.5, num_predict: 250 },
-      }),
+    const response = await generateOllamaResponse({
+      model: '',
+      prompt,
+      images: [imageBase64],
+      options: { temperature: 0.5, num_predict: 250 },
     });
 
-    if (!response.ok) return null;
+    if (!response) return null;
 
-    const data = (await response.json()) as { response: string };
-    const jsonText = data.response
+    const jsonText = response.response
       .trim()
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '');
@@ -240,7 +219,7 @@ JSON only:`;
 }
 
 /**
- * AI-powered temperature classification (replaces hardcoded hue ranges)
+ * AI-powered temperature classification
  */
 export async function classifyColorTemperature(
   imageBase64: string,
@@ -254,25 +233,18 @@ Is this a warm, cool, or neutral color?
 
 Reply with ONLY one word: warm, cool, or neutral`;
 
-    const response = await fetch(`${OLLAMA_API_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        images: [imageBase64],
-        stream: false,
-        options: { temperature: 0.1, num_predict: 3 },
-      }),
+    const response = await generateOllamaResponse({
+      model: '',
+      prompt,
+      images: [imageBase64],
+      options: { temperature: 0.1, num_predict: 3 },
     });
 
-    if (!response.ok) {
-      // Fallback to simple hue-based classification
+    if (!response) {
       return fallbackTemperature(rgb);
     }
 
-    const data = (await response.json()) as { response: string };
-    const answer = data.response.trim().toLowerCase();
+    const answer = response.response.trim().toLowerCase();
 
     if (answer.includes('warm')) return 'warm';
     if (answer.includes('cool')) return 'cool';
@@ -283,16 +255,16 @@ Reply with ONLY one word: warm, cool, or neutral`;
 }
 
 /**
- * Fallback temperature classification (simple hue-based)
+ * Fallback temperature classification
  */
 function fallbackTemperature(rgb: RGBValues): 'warm' | 'cool' | 'neutral' {
   const { r, g, b } = rgb;
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
 
-  if (max === min) return 'neutral'; // Grayscale
+  if (max === min) return 'neutral';
 
-  if (r === max && b === min) return 'warm'; // Red-orange-yellow range
-  if (b === max && r === min) return 'cool'; // Blue-cyan range
+  if (r === max && b === min) return 'warm';
+  if (b === max && r === min) return 'cool';
   return 'neutral';
 }
