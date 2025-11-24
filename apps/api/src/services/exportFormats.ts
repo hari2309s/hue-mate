@@ -1,5 +1,35 @@
 import type { ExtractedColor, ExportFormats } from '@hue-und-you/types';
 
+const CSS_SCALE_STEPS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
+
+function buildColorScale(color: ExtractedColor): Record<string, string> {
+  const { tints, shades } = color;
+  const base = color.formats.hex;
+
+  const safeTint = (indexFromLightest: number) => {
+    const idx = tints.length - indexFromLightest;
+    return tints[idx]?.hex ?? tints[tints.length - 1]?.hex ?? base;
+  };
+
+  const safeShade = (shadeIndex: number) => {
+    return shades[shadeIndex]?.hex ?? shades[shades.length - 1]?.hex ?? base;
+  };
+
+  return {
+    '50': safeTint(1),
+    '100': safeTint(2),
+    '200': safeTint(3),
+    '300': safeTint(4),
+    '400': tints[0]?.hex ?? base,
+    '500': base,
+    '600': safeShade(0),
+    '700': safeShade(1),
+    '800': safeShade(2),
+    '900': safeShade(3),
+    '950': safeShade(3),
+  };
+}
+
 // ============================================
 // GENERATE CSS VARIABLES
 // ============================================
@@ -7,18 +37,11 @@ import type { ExtractedColor, ExportFormats } from '@hue-und-you/types';
 function generateCssVariables(palette: ExtractedColor[]): string {
   const cssVars = palette
     .map((c) => {
-      const lines = [`  ${c.metadata.css_variable_name}: ${c.formats.hex};`];
-
-      c.tints.forEach((t, i) =>
-        lines.push(`  ${c.metadata.css_variable_name}-${(i + 1) * 100}: ${t.hex};`)
-      );
-
-      lines.push(`  ${c.metadata.css_variable_name}-500: ${c.formats.hex};`);
-
-      c.shades.forEach((s, i) =>
-        lines.push(`  ${c.metadata.css_variable_name}-${500 + (i + 1) * 100}: ${s.hex};`)
-      );
-
+      const scale = buildColorScale(c);
+      const lines = [`  ${c.metadata.css_variable_name}: var(${c.metadata.css_variable_name}-500);`];
+      CSS_SCALE_STEPS.forEach((step) => {
+        lines.push(`  ${c.metadata.css_variable_name}-${step}: ${scale[step]};`);
+      });
       return lines.join('\n');
     })
     .join('\n\n');
@@ -34,12 +57,9 @@ function generateScssVariables(palette: ExtractedColor[]): string {
   return palette
     .map((c) => {
       const name = c.name.toLowerCase().replace(/\s+/g, '-');
-      const lines = [`$${name}: ${c.formats.hex};`];
-
-      c.tints.forEach((t, i) => lines.push(`$${name}-${(i + 1) * 100}: ${t.hex};`));
-
-      c.shades.forEach((s, i) => lines.push(`$${name}-${500 + (i + 1) * 100}: ${s.hex};`));
-
+      const scale = buildColorScale(c);
+      const lines = [`$${name}: ${scale['500']};`];
+      CSS_SCALE_STEPS.forEach((step) => lines.push(`$${name}-${step}: ${scale[step]};`));
       return lines.join('\n');
     })
     .join('\n\n');
@@ -54,19 +74,14 @@ function generateTailwindConfig(palette: ExtractedColor[]): object {
 
   palette.forEach((c) => {
     const name = c.name.toLowerCase().replace(/\s+/g, '-');
-    colors[name] = {
-      50: c.tints[3]?.hex || c.formats.hex,
-      100: c.tints[3]?.hex || c.formats.hex,
-      200: c.tints[2]?.hex || c.formats.hex,
-      300: c.tints[1]?.hex || c.formats.hex,
-      400: c.tints[0]?.hex || c.formats.hex,
-      500: c.formats.hex,
-      600: c.shades[0]?.hex || c.formats.hex,
-      700: c.shades[1]?.hex || c.formats.hex,
-      800: c.shades[2]?.hex || c.formats.hex,
-      900: c.shades[3]?.hex || c.formats.hex,
-      DEFAULT: c.formats.hex,
-    };
+    const scale = buildColorScale(c);
+    colors[name] = CSS_SCALE_STEPS.reduce(
+      (acc, step) => {
+        acc[step] = scale[step];
+        return acc;
+      },
+      { DEFAULT: scale['500'] } as Record<string, string>
+    );
   });
 
   return { theme: { extend: { colors } } };
