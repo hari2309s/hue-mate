@@ -14,6 +14,7 @@ interface FileWithPreview extends File {
 
 interface FileUploaderProps {
   onResultChange?: (result: ColorPaletteResult | null) => void;
+  onPreviewChange?: (previewUrl: string | null) => void;
   maxSizeMB?: number;
   acceptedTypes?: string[];
 }
@@ -22,6 +23,7 @@ const MAX_SIZE_MB = 10;
 
 const FileUploader = ({
   onResultChange,
+  onPreviewChange,
   maxSizeMB = MAX_SIZE_MB,
   acceptedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'],
 }: FileUploaderProps) => {
@@ -92,12 +94,13 @@ const FileUploader = ({
         // Clear previous files
         files.forEach((f) => f.preview && URL.revokeObjectURL(f.preview));
         setFiles([validFile]);
+        onPreviewChange?.(validFile.preview ?? null);
 
         // Start upload
         await upload(validFile, { numColors: 10, includeBackground: true, generateHarmonies: true });
       }
     },
-    [files, validateFile, upload, isBusy]
+    [files, validateFile, upload, isBusy, onPreviewChange]
   );
 
   const handleDragOver = useCallback(
@@ -152,9 +155,10 @@ const FileUploader = ({
       }
       const newFiles = files.filter((_, i) => i !== index);
       setFiles(newFiles);
+      onPreviewChange?.(newFiles[0]?.preview ?? null);
       reset();
     },
-    [files, reset]
+    [files, reset, onPreviewChange]
   );
 
   const formatFileSize = (bytes: number): string => {
@@ -172,18 +176,20 @@ const FileUploader = ({
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto">
+    <div className="flex h-full w-full flex-col">
       <motion.div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        initial={{ opacity: 0, y: 16 }}
         animate={{
+          opacity: isBusy ? 0.7 : 1,
+          y: 0,
           scale: isDragging ? 1.02 : 1,
           borderColor: isDragging ? 'var(--color-soft-orange)' : 'var(--muted-foreground)',
-          opacity: isBusy ? 0.7 : 1,
         }}
         transition={{ duration: 0.2 }}
-        className={`relative rounded-2xl border border-dashed bg-var(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`relative flex min-h-[320px] flex-1 flex-col rounded-md border border-dashed bg-var(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <input
           type="file"
@@ -196,7 +202,7 @@ const FileUploader = ({
         <motion.div
           animate={{ y: isDragging ? -5 : 0 }}
           transition={{ duration: 0.2 }}
-          className="flex flex-col items-center gap-4"
+          className="flex flex-1 flex-col items-center justify-center gap-4"
         >
           <motion.div
             animate={{ scale: isDragging ? 1.2 : 1, rotate: isDragging ? 10 : 0 }}
@@ -246,7 +252,7 @@ const FileUploader = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-4 space-y-2"
+            className="mt-4 max-h-48 space-y-2 overflow-auto pr-1"
           >
             {files.map((file, index) => (
               <motion.div
