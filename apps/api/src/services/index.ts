@@ -42,3 +42,6 @@ export {
 
 // Export formats
 export { generateExports } from './exportFormats';
+
+// HF Color naming
+export { generateColorName } from './hfColorNaming';

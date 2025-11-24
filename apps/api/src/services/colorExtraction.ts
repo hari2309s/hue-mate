@@ -17,24 +17,10 @@ import {
 import { kMeansClusteringOklab } from './clustering';
 import { buildColorFormats } from './colorConversion';
 import { buildAccessibilityInfo } from './accessibility';
-import { findNearestPantone, generateCssVariableName, type CategoryWithScore } from './colorNaming';
+import { findNearestPantone, generateCssVariableName } from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
-import {
-  getContextualColorName,
-  getBaseColorName,
-  isOllamaAvailable,
-} from './colorContextDetection';
-import {
-  generateColorUsageSuggestion,
-  generateColorMood,
-  generatePaletteDescription,
-  classifyColorTemperature,
-} from './aiEnhancedMetadata';
-
-// ============================================
-// EXTRACTION OPTIONS
-// ============================================
+import { generateColorName } from './hfColorNaming';
 
 interface ExtractionOptions {
   numColors?: number;
@@ -42,55 +28,40 @@ interface ExtractionOptions {
   generateHarmonies?: boolean;
 }
 
-// ============================================
-// BUILD EXTRACTED COLOR (FULLY AI-POWERED)
-// ============================================
-
 async function buildExtractedColor(
-  imageBase64: string,
   rgb: RGBValues,
   weight: number,
   segment: 'foreground' | 'background',
-  categories: CategoryWithScore[],
   index: number,
   genHarmonies: boolean,
-  useOllama: boolean,
-  _allColors: ExtractedColor[] // For pairing suggestions
+  _allColors: ExtractedColor[]
 ): Promise<ExtractedColor> {
   const formats = buildColorFormats(rgb);
-  const hsl = formats.hsl.values;
   const oklch = formats.oklch.values;
 
-  let colorName: string;
-  let usedCategory: string;
-
-  // AI-powered contextual naming
-  if (useOllama && categories.length > 0) {
-    const result = await getContextualColorName(imageBase64, rgb, categories);
-    colorName = result.name;
-    usedCategory = result.category;
-  } else {
-    colorName = getBaseColorName(rgb);
-    usedCategory = 'general';
-  }
+  // Generate color name using HuggingFace
+  const colorName = await generateColorName(rgb);
 
   const { tints, shades } = generateTintsAndShades(oklch, colorName);
   const harmony = genHarmonies ? generateHarmonies(oklch) : ({} as ColorHarmony);
   const accessibility = buildAccessibilityInfo(rgb);
   const pantone = findNearestPantone(rgb);
 
-  // AI-powered temperature classification
-  const temperature = useOllama
-    ? await classifyColorTemperature(imageBase64, rgb, colorName)
-    : fallbackTemperature(hsl.h);
+  // Simple fallback temperature based on hue
+  const hsl = formats.hsl.values;
+  const temperature =
+    (hsl.h >= 0 && hsl.h <= 60) || (hsl.h >= 300 && hsl.h <= 360)
+      ? ('warm' as const)
+      : hsl.h >= 120 && hsl.h <= 240
+        ? ('cool' as const)
+        : ('neutral' as const);
 
-  // Create base color object
   const color: ExtractedColor = {
     id: `color_${String(index).padStart(3, '0')}`,
     name: colorName,
     source: {
       segment,
-      category: usedCategory,
+      category: 'general',
       pixel_coverage: weight,
       confidence: segment === 'foreground' ? 0.85 + weight * 0.15 : 0.75 + weight * 0.15,
     },
@@ -110,19 +81,6 @@ async function buildExtractedColor(
   return color;
 }
 
-/**
- * Fallback temperature (simple hue-based)
- */
-function fallbackTemperature(hue: number): 'warm' | 'cool' | 'neutral' {
-  if ((hue >= 0 && hue <= 60) || (hue >= 300 && hue <= 360)) return 'warm';
-  if (hue >= 120 && hue <= 240) return 'cool';
-  return 'neutral';
-}
-
-// ============================================
-// MAIN EXTRACTION PIPELINE (FULLY AI-POWERED)
-// ============================================
-
 export async function extractColorsFromImage(
   imageBuffer: Buffer,
   filename: string,
@@ -130,16 +88,7 @@ export async function extractColorsFromImage(
 ): Promise<ColorPaletteResult> {
   const { numColors = 5, generateHarmonies: genHarm = true } = options;
 
-  console.log('🎨 Starting AI-Powered Color Extraction Pipeline...');
-
-  // Check if Ollama is available
-  const ollamaAvailable = await isOllamaAvailable();
-  if (ollamaAvailable) {
-    console.log('   ✓ Ollama AI available - full AI-powered mode enabled');
-  } else {
-    console.log('   ⚠ Ollama not available - using basic mode');
-    console.log('   → Enable AI features: ollama pull llava-phi3');
-  }
+  console.log('🎨 Starting Color Extraction Pipeline...');
 
   // ============================================
   // STAGE 1: SEGMENTATION
@@ -154,11 +103,6 @@ export async function extractColorsFromImage(
   if (categories.length > 0) {
     console.log(`   ✓ Identified ${categories.length} semantic regions: ${categories.join(', ')}`);
   }
-
-  const categoryScores: CategoryWithScore[] = segments.map((s) => ({
-    label: s.label,
-    score: s.score,
-  }));
 
   // ============================================
   // STAGE 2: PIXEL EXTRACTION
@@ -196,11 +140,10 @@ export async function extractColorsFromImage(
   );
 
   // ============================================
-  // STAGE 4: AI-POWERED COLOR NAMING
+  // STAGE 4: COLOR NAMING
   // ============================================
-  console.log('🏷️  Stage 4: AI-Powered Color Naming...');
+  console.log('🏷️  Stage 4: Generating Color Names...');
 
-  const imageBase64 = imageBuffer.toString('base64');
   const palette: ExtractedColor[] = [];
   let colorIndex = 1;
 
@@ -208,14 +151,11 @@ export async function extractColorsFromImage(
   for (const colorData of dominantFgColors) {
     const rgb: RGBValues = { r: colorData.r, g: colorData.g, b: colorData.b };
     const color = await buildExtractedColor(
-      imageBase64,
       rgb,
       colorData.weight,
       'foreground',
-      categoryScores,
       colorIndex++,
       genHarm,
-      ollamaAvailable,
       palette
     );
     palette.push(color);
@@ -225,58 +165,20 @@ export async function extractColorsFromImage(
   for (const colorData of dominantBgColors) {
     const rgb: RGBValues = { r: colorData.r, g: colorData.g, b: colorData.b };
     const color = await buildExtractedColor(
-      imageBase64,
       rgb,
       colorData.weight,
       'background',
-      categoryScores,
       colorIndex++,
       genHarm,
-      ollamaAvailable,
       palette
     );
     palette.push(color);
   }
 
   // ============================================
-  // STAGE 5: AI-ENHANCED METADATA (NEW!)
+  // STAGE 5: EXPORT GENERATION
   // ============================================
-  if (ollamaAvailable) {
-    console.log('✨ Stage 5: Generating AI-Enhanced Metadata...');
-
-    // Generate usage suggestions and mood for each color
-    for (const color of palette) {
-      console.log(`   → Analyzing "${color.name}"...`);
-
-      const [usage, mood] = await Promise.all([
-        generateColorUsageSuggestion(imageBase64, color, palette),
-        generateColorMood(imageBase64, color),
-      ]);
-
-      if (usage) (color as any).usage = usage;
-      if (mood) (color as any).mood = mood;
-    }
-
-    console.log('   ✓ Generated usage suggestions and mood analysis');
-  }
-
-  // ============================================
-  // STAGE 6: PALETTE-LEVEL DESCRIPTION (NEW!)
-  // ============================================
-  let paletteDescription = undefined;
-
-  if (ollamaAvailable) {
-    console.log('📝 Stage 6: Generating Palette Description...');
-    paletteDescription = await generatePaletteDescription(imageBase64, palette, filename);
-    if (paletteDescription) {
-      console.log(`   ✓ "${paletteDescription.palette_description.slice(0, 60)}..."`);
-    }
-  }
-
-  // ============================================
-  // STAGE 7: EXPORT GENERATION
-  // ============================================
-  console.log('📦 Stage 7: Generating exports...');
+  console.log('📦 Stage 5: Generating exports...');
   const exports = generateExports(palette);
 
   const segmentInfo: SegmentInfo = {
@@ -293,7 +195,7 @@ export async function extractColorsFromImage(
     categories,
   };
 
-  console.log('✨ AI-Powered Pipeline Complete!');
+  console.log('✨ Pipeline Complete!');
   console.log(`   Colors: ${palette.map((c) => c.name).join(', ')}`);
 
   return {
@@ -306,6 +208,5 @@ export async function extractColorsFromImage(
     segments: segmentInfo,
     palette,
     exports,
-    description: paletteDescription,
   };
 }

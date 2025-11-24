@@ -11,7 +11,6 @@ import {
   getResultSchema,
 } from '@hue-und-you/api-schema';
 import { extractColorsFromImage } from './services/colorExtraction';
-import { getOllamaInfo } from './services/ollamaCloudClient';
 import type { ColorPaletteResult, UploadStatus } from '@hue-und-you/types';
 
 // In-memory storage (replace with DB in production)
@@ -135,16 +134,6 @@ console.log('🔧 Environment check:');
 console.log('   PORT:', PORT);
 console.log('   HF_API_KEY:', process.env.HUGGINGFACE_API_KEY ? '✓ Set' : '✗ Missing');
 console.log('   DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
-
-// Log Ollama configuration
-const ollamaInfo = getOllamaInfo();
-console.log('\n🤖 AI Configuration:');
-console.log(`   Type: ${ollamaInfo.type === 'cloud' ? '☁️  Ollama Cloud' : '🏠 Local Ollama'}`);
-console.log(`   URL: ${ollamaInfo.url}`);
-console.log(`   Model: ${ollamaInfo.model}`);
-if (ollamaInfo.type === 'cloud') {
-  console.log(`   API Key: ${ollamaInfo.hasApiKey ? '✓ Set' : '✗ Missing'}`);
-}
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
