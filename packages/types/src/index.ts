@@ -149,6 +149,16 @@ export interface ColorPaletteResult {
   segments: SegmentInfo;
   palette: ExtractedColor[];
   exports: ExportFormats;
+  metadata: ExtractionMetadata;
+}
+
+export interface ExtractionMetadata {
+  processingTimeMs: number;
+  algorithm: 'kmeans++' | 'weighted-kmeans';
+  colorDiversity: number;
+  averageSaturation: number;
+  dominantTemperature: 'warm' | 'cool' | 'neutral';
+  suggestedUsage: string;
 }
 
 // Upload Status
