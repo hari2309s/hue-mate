@@ -158,7 +158,7 @@ export function useImageUpload(): UseImageUploadReturn {
           body: JSON.stringify({
             imageId,
             options: {
-              numColors: options.numColors ?? 5,
+              numColors: options.numColors ?? 10,
               includeBackground: options.includeBackground ?? true,
               generateHarmonies: options.generateHarmonies ?? true,
             },

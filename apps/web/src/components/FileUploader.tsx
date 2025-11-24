@@ -94,7 +94,7 @@ const FileUploader = ({
         setFiles([validFile]);
 
         // Start upload
-        await upload(validFile, { numColors: 5, includeBackground: true, generateHarmonies: true });
+        await upload(validFile, { numColors: 10, includeBackground: true, generateHarmonies: true });
       }
     },
     [files, validateFile, upload, isBusy]

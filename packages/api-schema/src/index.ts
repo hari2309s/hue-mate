@@ -11,7 +11,7 @@ export const processImageSchema = z.object({
   imageId: z.string(),
   options: z
     .object({
-      numColors: z.number().min(1).max(20).default(5),
+      numColors: z.number().min(1).max(20).default(10),
       includeBackground: z.boolean().default(true),
       generateHarmonies: z.boolean().default(true),
     })

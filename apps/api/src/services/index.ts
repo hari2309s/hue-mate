@@ -30,7 +30,12 @@ export { kMeansClusteringOklab } from './clustering';
 export { buildAccessibilityInfo } from './accessibility';
 
 // Color naming
-export { findNearestPantone, generateCssVariableName, type CategoryWithScore } from './colorNaming';
+export {
+  findNearestPantone,
+  generateCssVariableName,
+  type CategoryWithScore,
+  generateColorName,
+} from './colorNaming';
 
 // Color harmony
 export {
@@ -43,5 +48,3 @@ export {
 // Export formats
 export { generateExports } from './exportFormats';
 
-// HF Color naming
-export { generateColorName } from './hfColorNaming';

@@ -17,10 +17,9 @@ import {
 import { kMeansClusteringOklab } from './clustering';
 import { buildColorFormats } from './colorConversion';
 import { buildAccessibilityInfo } from './accessibility';
-import { findNearestPantone, generateCssVariableName } from './colorNaming';
+import { findNearestPantone, generateCssVariableName, generateColorName } from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
-import { generateColorName } from './hfColorNaming';
 
 interface ExtractionOptions {
   numColors?: number;
@@ -39,8 +38,8 @@ async function buildExtractedColor(
   const formats = buildColorFormats(rgb);
   const oklch = formats.oklch.values;
 
-  // Generate color name using HuggingFace
-  const colorName = await generateColorName(rgb);
+  // Generate color name using heuristic palette
+  const colorName = generateColorName(rgb);
 
   const { tints, shades } = generateTintsAndShades(oklch, colorName);
   const harmony = genHarmonies ? generateHarmonies(oklch) : ({} as ColorHarmony);
@@ -86,7 +85,7 @@ export async function extractColorsFromImage(
   filename: string,
   options: ExtractionOptions = {}
 ): Promise<ColorPaletteResult> {
-  const { numColors = 5, generateHarmonies: genHarm = true } = options;
+  const { numColors = 10, generateHarmonies: genHarm = true } = options;
 
   console.log('🎨 Starting Color Extraction Pipeline...');
 
