@@ -184,7 +184,7 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-8">
+    <div className="w-full max-w-5xl mx-auto mt-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <h2 className="text-2xl font-medium text-var(--foreground) mb-2">Extracted Palette</h2>
         <p className="text-var(--muted-foreground)">
