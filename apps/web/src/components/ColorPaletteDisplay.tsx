@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Check, ChevronDown, ChevronUp, Clock3, Palette, ThermometerSun, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColorPaletteResult, ExtractedColor } from '@hue-und-you/types';
 
@@ -53,7 +53,7 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="rounded-xl border border-var(--border) bg-var(--card) overflow-hidden"
+      className="rounded-md border border-var(--border) bg-var(--card) overflow-hidden"
     >
       {/* Color swatch */}
       <div
@@ -176,6 +176,22 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
   const [showExports, setShowExports] = useState(false);
   const [copiedExport, setCopiedExport] = useState<string | null>(null);
 
+  const diversityLabel =
+    result.metadata.colorDiversity >= 0.75
+      ? 'High color diversity'
+      : result.metadata.colorDiversity >= 0.45
+        ? 'Balanced color diversity'
+        : 'Minimal color diversity';
+  const temperatureLabel =
+    result.metadata.dominantTemperature === 'cool'
+      ? 'Cool-toned palette'
+      : result.metadata.dominantTemperature === 'warm'
+        ? 'Warm-toned palette'
+        : 'Neutral palette';
+  const extractionSeconds = (result.metadata.processingTimeMs / 1000).toFixed(1);
+  const algorithmLabel =
+    result.metadata.algorithm === 'weighted-kmeans' ? 'Weighted K-means++' : 'K-means++';
+
   const copyExport = async (content: string, label: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedExport(label);
@@ -185,11 +201,30 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
 
   return (
     <div className="w-full max-w-5xl mx-auto mt-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h2 className="text-2xl font-medium text-var(--foreground) mb-2">Extracted Palette</h2>
-        <p className="text-var(--muted-foreground)">
-          {result.palette.length} colors extracted from {result.source_image.filename}
-        </p>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 rounded-md border border-var(--border) bg-var(--card) p-5 text-sm text-var(--foreground)"
+      >
+        <div className="flex items-center gap-3">
+          <Clock3 className="h-5 w-5 text-soft-orange" />
+          <span>Extracted in {result.palette.length} colors in {extractionSeconds}s • Algorithm: {algorithmLabel}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <Palette className="h-5 w-5 text-soft-orange" />
+          <span>
+            {diversityLabel} ({result.metadata.colorDiversity}) • Avg saturation{' '}
+            {result.metadata.averageSaturation}%
+          </span>
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <ThermometerSun className="h-5 w-5 text-soft-orange" />
+          <span>{temperatureLabel}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <Sparkles className="h-5 w-5 text-soft-orange" />
+          <span>{result.metadata.suggestedUsage}</span>
+        </div>
       </motion.div>
 
       {/* Color grid */}
@@ -204,7 +239,7 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="border border-var(--border) rounded-xl bg-var(--card) overflow-hidden"
+        className="border border-var(--border) rounded-md bg-var(--card) overflow-hidden"
       >
         <button
           onClick={() => setShowExports(!showExports)}

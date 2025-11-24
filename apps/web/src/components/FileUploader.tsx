@@ -260,7 +260,7 @@ const FileUploader = ({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-3 rounded-lg bg-var(--card) border border-var(--border) p-3"
+                className="flex items-center gap-3 rounded-md bg-var(--card) border border-var(--border) p-3"
               >
                 {file.preview ? (
                   <Image
@@ -276,11 +276,13 @@ const FileUploader = ({
                   </div>
                 )}
 
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-var(--foreground)">{file.name}</p>
-                  <p className="text-xs text-var(--muted-foreground)">
-                    {formatFileSize(file.size)} • {progress.message}
-                  </p>
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-var(--foreground)">{file.name}</p>
+                    <p className="text-xs text-var(--muted-foreground)">
+                      {formatFileSize(file.size)} • {progress.message}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
