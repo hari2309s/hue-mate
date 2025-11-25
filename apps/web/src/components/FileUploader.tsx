@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, File, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, FileIcon, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { useImageUpload } from '@/src/hooks/useImageUpload';
@@ -35,7 +35,6 @@ const FileUploader = ({
   const maxBytes = maxSizeMB * 1024 * 1024;
   const isBusy = isUploading || isProcessing;
 
-  // FIX: Use useEffect to notify parent of result changes instead of during render
   useEffect(() => {
     if (onResultChange) {
       onResultChange(result);
@@ -97,7 +96,11 @@ const FileUploader = ({
         onPreviewChange?.(validFile.preview ?? null);
 
         // Start upload
-        await upload(validFile, { numColors: 10, includeBackground: true, generateHarmonies: true });
+        await upload(validFile, {
+          numColors: 10,
+          includeBackground: true,
+          generateHarmonies: true,
+        });
       }
     },
     [files, validateFile, upload, isBusy, onPreviewChange]
@@ -189,7 +192,7 @@ const FileUploader = ({
           borderColor: isDragging ? 'var(--color-soft-orange)' : 'var(--muted-foreground)',
         }}
         transition={{ duration: 0.2 }}
-        className={`relative flex min-h-[320px] flex-1 flex-col rounded-md border border-dashed bg-var(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`relative flex min-h-80 flex-1 flex-col rounded-md border border-dashed bg-var(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <input
           type="file"
@@ -272,13 +275,15 @@ const FileUploader = ({
                   />
                 ) : (
                   <div className="flex h-10 w-10 items-center justify-center rounded bg-var(--muted)">
-                    <File className="h-5 w-5 text-var(--muted-foreground)" />
+                    <FileIcon className="h-5 w-5 text-var(--muted-foreground)" />
                   </div>
                 )}
 
                 <div className="flex-1 min-w-0 flex items-center gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-var(--foreground)">{file.name}</p>
+                    <p className="truncate text-sm font-medium text-var(--foreground)">
+                      {file.name}
+                    </p>
                     <p className="text-xs text-var(--muted-foreground)">
                       {formatFileSize(file.size)} • {progress.message}
                     </p>

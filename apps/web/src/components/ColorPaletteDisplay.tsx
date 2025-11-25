@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, ChevronDown, ChevronUp, Clock3, Palette, ThermometerSun, Sparkles } from 'lucide-react';
+import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColorPaletteResult, ExtractedColor } from '@hue-und-you/types';
+import ExtractionMetadata from '@/src/components/ExtractionMetadata';
 
 interface ColorPaletteDisplayProps {
   result: ColorPaletteResult;
@@ -141,7 +142,7 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
                     {color.tints.map((tint) => (
                       <button
                         key={tint.level}
-                        onClick={() => copyToClipboard(tint.hex, `Tint ${tint.level}`)}
+                        onClick={() => copyToClipboard(tint.hex, `Tint${tint.level}`)}
                         className="flex-1 h-6 rounded transition-transform hover:scale-110"
                         style={{ backgroundColor: tint.hex }}
                         title={tint.hex}
@@ -175,60 +176,19 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
 const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
   const [showExports, setShowExports] = useState(false);
   const [copiedExport, setCopiedExport] = useState<string | null>(null);
-
-  const diversityLabel =
-    result.metadata.colorDiversity >= 0.75
-      ? 'High color diversity'
-      : result.metadata.colorDiversity >= 0.45
-        ? 'Balanced color diversity'
-        : 'Minimal color diversity';
-  const temperatureLabel =
-    result.metadata.dominantTemperature === 'cool'
-      ? 'Cool-toned palette'
-      : result.metadata.dominantTemperature === 'warm'
-        ? 'Warm-toned palette'
-        : 'Neutral palette';
-  const extractionSeconds = (result.metadata.processingTimeMs / 1000).toFixed(1);
-  const algorithmLabel =
-    result.metadata.algorithm === 'weighted-kmeans' ? 'Weighted K-means++' : 'K-means++';
-
   const copyExport = async (content: string, label: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedExport(label);
     toast.success(`Copied ${label}`);
     setTimeout(() => setCopiedExport(null), 2000);
   };
-
   return (
-    <div className="w-full max-w-5xl mx-auto mt-8">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8 rounded-md border border-var(--border) bg-var(--card) p-5 text-sm text-var(--foreground)"
-      >
-        <div className="flex items-center gap-3">
-          <Clock3 className="h-5 w-5 text-soft-orange" />
-          <span>Extracted in {result.palette.length} colors in {extractionSeconds}s • Algorithm: {algorithmLabel}</span>
-        </div>
-        <div className="flex items-center gap-3 mt-2">
-          <Palette className="h-5 w-5 text-soft-orange" />
-          <span>
-            {diversityLabel} ({result.metadata.colorDiversity}) • Avg saturation{' '}
-            {result.metadata.averageSaturation}%
-          </span>
-        </div>
-        <div className="flex items-center gap-3 mt-2">
-          <ThermometerSun className="h-5 w-5 text-soft-orange" />
-          <span>{temperatureLabel}</span>
-        </div>
-        <div className="flex items-center gap-3 mt-2">
-          <Sparkles className="h-5 w-5 text-soft-orange" />
-          <span>{result.metadata.suggestedUsage}</span>
-        </div>
-      </motion.div>
+    <div className="w-full max-w-5xl mx-auto mt-8 space-y-8">
+      {/* Extraction Metadata */}
+      <ExtractionMetadata metadata={result.metadata} showWarning={true} />
 
       {/* Color grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {result.palette.map((color, index) => (
           <ColorCard key={color.id} color={color} index={index} />
         ))}
@@ -291,7 +251,11 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
                       onClick={() => copyExport(result.exports.scss_variables, 'SCSS variables')}
                       className="text-xs text-soft-orange hover:underline flex items-center gap-1"
                     >
-                      <Copy className="h-3 w-3" />
+                      {copiedExport === 'SCSS variables' ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
                       Copy
                     </button>
                   </div>
@@ -313,12 +277,42 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
                       }
                       className="text-xs text-soft-orange hover:underline flex items-center gap-1"
                     >
-                      <Copy className="h-3 w-3" />
+                      {copiedExport === 'Tailwind config' ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
                       Copy
                     </button>
                   </div>
                   <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
                     <code>{JSON.stringify(result.exports.tailwind_config, null, 2)}</code>
+                  </pre>
+                </div>
+
+                {/* Figma Tokens */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-var(--foreground)">Figma Tokens</h4>
+                    <button
+                      onClick={() =>
+                        copyExport(
+                          JSON.stringify(result.exports.figma_tokens, null, 2),
+                          'Figma tokens'
+                        )
+                      }
+                      className="text-xs text-soft-orange hover:underline flex items-center gap-1"
+                    >
+                      {copiedExport === 'Figma tokens' ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
+                    <code>{JSON.stringify(result.exports.figma_tokens, null, 2)}</code>
                   </pre>
                 </div>
               </div>
@@ -329,5 +323,4 @@ const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
     </div>
   );
 };
-
 export default ColorPaletteDisplay;
