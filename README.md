@@ -24,9 +24,6 @@
 </div>
 
 ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS/SCSS custom properties. Built for designers who ship.
-</div>
-
-ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS/SCSS custom properties. Built for designers who ship.
 
 ## Features
 - Foreground/background + semantic segmentation with Hugging Face models and robust luminance fallback
@@ -34,6 +31,7 @@ ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config,
 - Deduplication and hue diversity enforcement to avoid near-duplicate swatches
 - Heuristic color naming with palette-aware uniqueness and Pantone approximation
 - Accessibility info (WCAG contrast on white/black and APCA-like metric) with suggested text color
+- Animated UI and transitions with Framer Motion in the frontend
 - Tints and shades generation and classic harmonies (complementary, analogous, triadic, split)
 - One-click export: CSS variables (11 steps), SCSS variables, Tailwind `extend.colors`, Figma variables
 
@@ -135,6 +133,7 @@ Drizzle schemas live in `packages/db/src/schema.ts:1-71` for images, palettes, p
 
 ## Deployment
 Render configuration for the API is at `apps/api/render.yaml`. It builds only the API service, sets `PORT=10000`, and expects `HUGGINGFACE_API_KEY`.
+Frontend is deployed on Vercel
 
 ## Troubleshooting
 - Segmentation returns empty: ensure `HUGGINGFACE_API_KEY` is set; otherwise the luminance fallback is used
