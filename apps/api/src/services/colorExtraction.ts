@@ -15,12 +15,14 @@ import {
   extractPixels,
   splitPixelsByLuminance,
 } from './segmentation';
-import { kMeansClusteringOklab } from './clustering';
-import { buildColorFormats, rgbToHsl } from './colorConversion';
+import { kMeansClusteringOklab, applySaturationBias } from './clustering';
+import { buildColorFormats } from './colorConversion';
 import { buildAccessibilityInfo } from './accessibility';
 import { findNearestPantone, generateCssVariableName, generateColorName } from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
+import { SegmentResult } from '../types/segmentation';
+
 interface ExtractionHooks {
   onPartial?: (colors: ExtractedColor[]) => void;
 }
@@ -33,17 +35,8 @@ interface ExtractionOptions {
   generateHarmonies?: boolean;
 }
 
-function applySaturationBias(pixels: { r: number; g: number; b: number }[]): RGBValues[] {
-  const biased: RGBValues[] = [];
-  for (const pixel of pixels) {
-    const { s } = rgbToHsl(pixel.r, pixel.g, pixel.b);
-    const saturationBoost = Math.pow(s / 100, 1.5);
-    const repetitions = Math.max(1, Math.round(saturationBoost * 3));
-    for (let i = 0; i < repetitions; i++) {
-      biased.push({ r: pixel.r, g: pixel.g, b: pixel.b });
-    }
-  }
-  return biased;
+function applySaturationBiasToPixels(pixels: { r: number; g: number; b: number }[]): RGBValues[] {
+  return applySaturationBias(pixels) as RGBValues[];
 }
 
 function computeColorDiversity(colors: ExtractedColor[]): number {
@@ -66,7 +59,10 @@ function resolveDominantTemperature(colors: ExtractedColor[]): 'warm' | 'cool' |
     },
     { warm: 0, cool: 0, neutral: 0 }
   );
-  return (Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0] as 'warm' | 'cool' | 'neutral') ?? 'neutral';
+  return (
+    (Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0] as 'warm' | 'cool' | 'neutral') ??
+    'neutral'
+  );
 }
 
 function buildSuggestedUsage(
@@ -78,12 +74,16 @@ function buildSuggestedUsage(
     return 'Vibrant palette for energetic, expressive designs';
   }
   if (dominantTemperature === 'cool') {
-    return colorDiversity >= 0.7 ? 'Professional, calming palette with rich accents' : 'Minimal, cool-toned palette';
+    return colorDiversity >= 0.7
+      ? 'Professional, calming palette with rich accents'
+      : 'Minimal, cool-toned palette';
   }
   if (dominantTemperature === 'warm') {
     return 'Inviting palette ideal for lifestyle or hospitality brands';
   }
-  return colorDiversity >= 0.7 ? 'Versatile palette for modern interfaces' : 'Balanced palette for everyday use';
+  return colorDiversity >= 0.7
+    ? 'Versatile palette for modern interfaces'
+    : 'Balanced palette for everyday use';
 }
 
 async function buildExtractedColor(
@@ -142,28 +142,50 @@ async function buildExtractedColor(
 export async function extractColorsFromImage(
   imageBuffer: Buffer,
   filename: string,
-  options: ExtractionOptions = {}
-,
+  options: ExtractionOptions = {},
   hooks: ExtractionHooks = {}
 ): Promise<ColorPaletteResult> {
   const { numColors = 10, generateHarmonies: genHarm = true } = options;
   const processingStart = Date.now();
   let partialSent = false;
+  let usedFallback = false;
 
   console.log('🎨 Starting Color Extraction Pipeline...');
 
   // ============================================
-  // STAGE 1: SEGMENTATION
+  // STAGE 1: SEGMENTATION (WITH GRACEFUL FALLBACK)
   // ============================================
   console.log('📐 Stage 1a: Foreground/Background Segmentation...');
-  const foregroundMask = await segmentForegroundBackground(imageBuffer);
+  let foregroundMask = null;
+
+  try {
+    foregroundMask = await segmentForegroundBackground(imageBuffer);
+  } catch (error) {
+    console.log(
+      `   ⚠ Segmentation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+    console.log('   → Continuing without foreground/background separation');
+    usedFallback = true;
+  }
 
   console.log('📊 Stage 1b: Semantic Segmentation...');
-  const segments = await segmentSemantic(imageBuffer);
+  let segments: SegmentResult[] = [];
+
+  try {
+    segments = await segmentSemantic(imageBuffer);
+  } catch (error) {
+    console.log(
+      `   ⚠ Semantic segmentation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+    console.log('   → Continuing with color extraction only');
+    usedFallback = true;
+  }
 
   const categories = segments.map((s) => s.label).filter(Boolean);
   if (categories.length > 0) {
     console.log(`   ✓ Identified ${categories.length} semantic regions: ${categories.join(', ')}`);
+  } else if (!usedFallback) {
+    console.log('   ℹ No semantic regions detected');
   }
 
   // ============================================
@@ -179,14 +201,23 @@ export async function extractColorsFromImage(
   let fgPixels = pixels.filter((_, i) => isForeground[i]);
   let bgPixels = pixels.filter((_, i) => !isForeground[i]);
 
+  // Fallback: if segmentation didn't work well, use luminance-based split
   if (fgPixels.length === 0 || bgPixels.length === 0 || fgPixels.length < pixels.length * 0.05) {
+    if (fgPixels.length === 0 || bgPixels.length === 0) {
+      console.log('   ⚠ Segmentation produced poor results, using fallback split');
+      usedFallback = true;
+    }
     const split = splitPixelsByLuminance(pixels);
     fgPixels = split.foreground;
     bgPixels = split.background;
   }
 
+  console.log(
+    `   ✓ Foreground: ${Math.round((fgPixels.length / pixels.length) * 100)}% | Background: ${Math.round((bgPixels.length / pixels.length) * 100)}%`
+  );
+
   // ============================================
-  // STAGE 3: COLOR CLUSTERING
+  // STAGE 3: COLOR CLUSTERING (WITH IMPROVED SATURATION BIAS)
   // ============================================
   console.log('🔬 Stage 3: K-means Clustering in OKLCH space...');
 
@@ -194,8 +225,9 @@ export async function extractColorsFromImage(
   const fgColorCount = Math.max(1, Math.round(numColors * fgRatio));
   const bgColorCount = Math.max(1, numColors - fgColorCount);
 
-  const biasedFgPixels = applySaturationBias(fgPixels);
-  const biasedBgPixels = applySaturationBias(bgPixels);
+  // Apply improved saturation boosting
+  const biasedFgPixels = applySaturationBiasToPixels(fgPixels);
+  const biasedBgPixels = applySaturationBiasToPixels(bgPixels);
 
   const dominantFgColors =
     biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount) : [];
@@ -230,13 +262,11 @@ export async function extractColorsFromImage(
       palette
     );
     palette.push(color);
-
     if (!partialSent && palette.length >= PARTIAL_COLOR_COUNT) {
       hooks.onPartial?.(palette.slice(0, PARTIAL_COLOR_COUNT));
       partialSent = true;
     }
   }
-
   if (!partialSent && palette.length > 0) {
     hooks.onPartial?.(palette.slice(0, Math.min(PARTIAL_COLOR_COUNT, palette.length)));
     partialSent = true;
@@ -246,8 +276,8 @@ export async function extractColorsFromImage(
   // STAGE 5: EXPORT GENERATION
   // ============================================
   console.log('📦 Stage 5: Generating exports...');
-  const exports = generateExports(palette);
 
+  const exports = generateExports(palette);
   const segmentInfo: SegmentInfo = {
     foreground: {
       pixel_percentage: foregroundMask
@@ -263,13 +293,13 @@ export async function extractColorsFromImage(
   };
 
   console.log('✨ Pipeline Complete!');
-  console.log(`   Colors: ${palette.map((c) => c.name).join(', ')}`);
+  console.log(`Colors: ${palette.map((c) => c.name).join(', ')}`);
 
   const colorDiversity = computeColorDiversity(palette);
   const averageSaturation =
-    palette.reduce((sum, color) => sum + color.formats.hsl.values.s, 0) / Math.max(palette.length, 1);
+    palette.reduce((sum, color) => sum + color.formats.hsl.values.s, 0) /
+    Math.max(palette.length, 1);
   const dominantTemperature = resolveDominantTemperature(palette);
-
   const extractionMetadata: ExtractionMetadata = {
     processingTimeMs: Date.now() - processingStart,
     algorithm: 'weighted-kmeans',

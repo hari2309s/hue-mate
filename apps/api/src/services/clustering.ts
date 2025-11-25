@@ -1,5 +1,5 @@
 import type { PixelData, PixelWithWeight, PixelWithOklab } from '../types/segmentation';
-import { rgbToOklab, oklabToOklch, oklchToRgb } from './colorConversion';
+import { rgbToOklab, oklabToOklch, oklchToRgb, rgbToHsl } from './colorConversion';
 
 // ============================================
 // K-MEANS++ INITIALIZATION
@@ -38,6 +38,61 @@ function kMeansPlusPlus(pixels: PixelWithOklab[], k: number): PixelWithOklab[] {
   }
 
   return centroids;
+}
+
+// ============================================
+// SATURATION BOOSTING
+// ============================================
+
+/**
+ * Apply aggressive saturation bias to ensure vibrant colors are captured
+ * High saturation colors get much higher weight in clustering
+ */
+export function applySaturationBias(pixels: PixelData[]): PixelData[] {
+  const biased: PixelData[] = [];
+
+  for (const pixel of pixels) {
+    const hsl = rgbToHsl(pixel.r, pixel.g, pixel.b);
+    const saturation = hsl.s; // 0-100
+
+    // Calculate boost factor based on saturation
+    // Ultra-saturated (>75%): 5x weight
+    // Very saturated (50-75%): 3x weight
+    // Moderately saturated (25-50%): 1.5x weight
+    // Low saturation (<25%): 1x weight (no boost)
+    let saturationBoost = 1;
+
+    if (saturation > 75) {
+      // Highly vibrant colors - give them strong presence
+      saturationBoost = Math.pow(saturation / 100, 2.2) * 5;
+    } else if (saturation > 50) {
+      // Very saturated - boost them
+      saturationBoost = Math.pow(saturation / 100, 2.0) * 3;
+    } else if (saturation > 25) {
+      // Moderately saturated - slight boost
+      saturationBoost = Math.pow(saturation / 100, 1.5) * 1.5;
+    } else {
+      // Low saturation (mostly grays/neutrals) - keep neutral weight
+      saturationBoost = 1;
+    }
+
+    // Additionally boost pixels that are neither too dark nor too bright
+    // (middle tones tend to be more visually important)
+    const lightness = hsl.l; // 0-100
+    if (lightness >= 20 && lightness <= 80) {
+      saturationBoost *= 1.2; // 20% boost for mid-tone colors
+    }
+
+    // Ensure minimum 1 repetition, maximum reasonable limit
+    const repetitions = Math.max(1, Math.min(10, Math.round(saturationBoost)));
+
+    // Add pixel multiple times based on boost
+    for (let i = 0; i < repetitions; i++) {
+      biased.push({ r: pixel.r, g: pixel.g, b: pixel.b });
+    }
+  }
+
+  return biased;
 }
 
 // ============================================
