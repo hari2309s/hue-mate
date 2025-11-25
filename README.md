@@ -11,6 +11,8 @@
 [![Zod](https://img.shields.io/badge/Zod-Schema-3E67B1?logo=zod&logoColor=white)](https://zod.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Framer Motion](https://img.shields.io/badge/Framer%20Motion-Animations-0055FF?logo=framer&logoColor=white)](https://www.framer.com/motion/)
+[![Vercel](https://img.shields.io/badge/Vercel-Hosting-000000?logo=vercel&logoColor=white)](https://vercel.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Sharp](https://img.shields.io/badge/Sharp-Image-00C853?logo=sharp&logoColor=white)](https://sharp.pixelplumbing.com/)
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-FFCA00?logo=huggingface&logoColor=black)](https://huggingface.co/)
@@ -19,6 +21,9 @@
 [![Render](https://img.shields.io/badge/Render-Deploy-46E3B7?logo=render&logoColor=white)](https://render.com/)
 [![License: ISC](https://img.shields.io/badge/License-ISC-lightgrey.svg)](https://opensource.org/licenses/ISC)
 
+</div>
+
+ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS/SCSS custom properties. Built for designers who ship.
 </div>
 
 ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS/SCSS custom properties. Built for designers who ship.
