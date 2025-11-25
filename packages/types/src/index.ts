@@ -216,3 +216,13 @@ export interface ProcessImageInput {
     generateHarmonies?: boolean;
   };
 }
+
+export interface ExportFormats {
+  css_variables: string;
+  tailwind_config: object;
+  figma_tokens: object;
+  scss_variables: string;
+  swift?: string;
+  kotlin?: string;
+  json_export?: string;
+}
