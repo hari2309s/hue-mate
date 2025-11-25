@@ -18,7 +18,12 @@ import {
 import { kMeansClusteringOklab, applySaturationBias } from './clustering';
 import { buildColorFormats } from './colorConversion';
 import { buildAccessibilityInfo } from './accessibility';
-import { findNearestPantone, generateCssVariableName, generateColorName } from './colorNaming';
+import {
+  findNearestPantone,
+  generateCssVariableName,
+  generateColorName,
+  resetPaletteNameTracker,
+} from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
 import { SegmentResult } from '../types/segmentation';
@@ -35,6 +40,14 @@ interface ExtractionOptions {
   generateHarmonies?: boolean;
 }
 
+interface SegmentationResult {
+  foregroundMask: any;
+  method: 'mask2former' | 'fallback-luminance';
+  quality: 'high' | 'medium' | 'low';
+  usedFallback: boolean;
+  confidence: number;
+}
+
 function applySaturationBiasToPixels(pixels: { r: number; g: number; b: number }[]): RGBValues[] {
   return applySaturationBias(pixels) as RGBValues[];
 }
@@ -49,6 +62,33 @@ function computeColorDiversity(colors: ExtractedColor[]): number {
   }, 0);
   const normalized = colors.length > 1 ? entropy / Math.log(colors.length) : 0;
   return Number(Math.max(0, Math.min(1, normalized)).toFixed(2));
+}
+
+function computeColorSeparation(colors: ExtractedColor[]): number {
+  // Calculate average distance between colors in OKLCH space
+  if (colors.length < 2) return 1.0;
+
+  let totalDistance = 0;
+  let count = 0;
+
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = i + 1; j < colors.length; j++) {
+      const c1 = colors[i].formats.oklch.values;
+      const c2 = colors[j].formats.oklch.values;
+
+      const dl = c1.l - c2.l;
+      const dc = c1.c - c2.c;
+      const dh = Math.min(Math.abs(c1.h - c2.h), 360 - Math.abs(c1.h - c2.h));
+
+      const distance = Math.sqrt(dl * dl + dc * dc + (dh / 360) * (dh / 360));
+      totalDistance += distance;
+      count++;
+    }
+  }
+
+  const avgDistance = totalDistance / count;
+  // Normalize to 0-1 range (assuming max meaningful distance is ~2)
+  return Math.min(1.0, avgDistance / 2.0);
 }
 
 function resolveDominantTemperature(colors: ExtractedColor[]): 'warm' | 'cool' | 'neutral' {
@@ -86,6 +126,43 @@ function buildSuggestedUsage(
     : 'Balanced palette for everyday use';
 }
 
+async function performSegmentation(imageBuffer: Buffer): Promise<SegmentationResult> {
+  let foregroundMask = null;
+  let usedFallback = false;
+  let method: 'mask2former' | 'fallback-luminance' = 'mask2former';
+  let quality: 'high' | 'medium' | 'low' = 'high';
+  let confidence = 0.9;
+
+  try {
+    foregroundMask = await segmentForegroundBackground(imageBuffer);
+
+    if (!foregroundMask) {
+      console.log('   ⚠ Segmentation returned null, using fallback');
+      usedFallback = true;
+      method = 'fallback-luminance';
+      quality = 'medium';
+      confidence = 0.5;
+    } else if (
+      foregroundMask.foreground_percentage < 5 ||
+      foregroundMask.foreground_percentage > 95
+    ) {
+      console.log('   ⚠ Extreme foreground percentage, segmentation may be unreliable');
+      quality = 'low';
+      confidence = 0.6;
+    }
+  } catch (error) {
+    console.log(
+      `   ⚠ Segmentation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+    usedFallback = true;
+    method = 'fallback-luminance';
+    quality = 'low';
+    confidence = 0.4;
+  }
+
+  return { foregroundMask, method, quality, usedFallback, confidence };
+}
+
 async function buildExtractedColor(
   rgb: RGBValues,
   weight: number,
@@ -105,7 +182,7 @@ async function buildExtractedColor(
   const accessibility = buildAccessibilityInfo(rgb);
   const pantone = findNearestPantone(rgb);
 
-  // Simple fallback temperature based on hue
+  // Temperature based on hue
   const hsl = formats.hsl.values;
   const temperature =
     (hsl.h >= 0 && hsl.h <= 60) || (hsl.h >= 300 && hsl.h <= 360)
@@ -148,25 +225,20 @@ export async function extractColorsFromImage(
   const { numColors = 10, generateHarmonies: genHarm = true } = options;
   const processingStart = Date.now();
   let partialSent = false;
-  let usedFallback = false;
 
   console.log('🎨 Starting Color Extraction Pipeline...');
 
+  // Reset the palette name tracker for this extraction
+  resetPaletteNameTracker();
+
   // ============================================
-  // STAGE 1: SEGMENTATION (WITH GRACEFUL FALLBACK)
+  // STAGE 1: SEGMENTATION (WITH QUALITY TRACKING)
   // ============================================
   console.log('📐 Stage 1a: Foreground/Background Segmentation...');
-  let foregroundMask = null;
+  const segmentationResult = await performSegmentation(imageBuffer);
+  const { foregroundMask, method, quality, usedFallback, confidence } = segmentationResult;
 
-  try {
-    foregroundMask = await segmentForegroundBackground(imageBuffer);
-  } catch (error) {
-    console.log(
-      `   ⚠ Segmentation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
-    console.log('   → Continuing without foreground/background separation');
-    usedFallback = true;
-  }
+  console.log(`   ℹ Segmentation: method=${method}, quality=${quality}, confidence=${confidence}`);
 
   console.log('📊 Stage 1b: Semantic Segmentation...');
   let segments: SegmentResult[] = [];
@@ -177,15 +249,11 @@ export async function extractColorsFromImage(
     console.log(
       `   ⚠ Semantic segmentation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
-    console.log('   → Continuing with color extraction only');
-    usedFallback = true;
   }
 
   const categories = segments.map((s) => s.label).filter(Boolean);
   if (categories.length > 0) {
     console.log(`   ✓ Identified ${categories.length} semantic regions: ${categories.join(', ')}`);
-  } else if (!usedFallback) {
-    console.log('   ℹ No semantic regions detected');
   }
 
   // ============================================
@@ -204,8 +272,7 @@ export async function extractColorsFromImage(
   // Fallback: if segmentation didn't work well, use luminance-based split
   if (fgPixels.length === 0 || bgPixels.length === 0 || fgPixels.length < pixels.length * 0.05) {
     if (fgPixels.length === 0 || bgPixels.length === 0) {
-      console.log('   ⚠ Segmentation produced poor results, using fallback split');
-      usedFallback = true;
+      console.log('   ⚠ Using luminance-based fallback split');
     }
     const split = splitPixelsByLuminance(pixels);
     fgPixels = split.foreground;
@@ -290,16 +357,27 @@ export async function extractColorsFromImage(
         : Math.round((1 - fgRatio) * 1000) / 10,
     },
     categories,
+    method,
+    quality,
   };
 
   console.log('✨ Pipeline Complete!');
   console.log(`Colors: ${palette.map((c) => c.name).join(', ')}`);
 
+  // ============================================
+  // STAGE 6: METADATA CALCULATION
+  // ============================================
   const colorDiversity = computeColorDiversity(palette);
+  const colorSeparation = computeColorSeparation(palette);
   const averageSaturation =
     palette.reduce((sum, color) => sum + color.formats.hsl.values.s, 0) /
     Math.max(palette.length, 1);
   const dominantTemperature = resolveDominantTemperature(palette);
+
+  // Calculate naming quality (based on diversity and no duplicates)
+  const uniqueNames = new Set(palette.map((c) => c.name));
+  const namingQuality = uniqueNames.size / palette.length;
+
   const extractionMetadata: ExtractionMetadata = {
     processingTimeMs: Date.now() - processingStart,
     algorithm: 'weighted-kmeans',
@@ -307,6 +385,17 @@ export async function extractColorsFromImage(
     averageSaturation: Math.round(averageSaturation),
     dominantTemperature,
     suggestedUsage: buildSuggestedUsage(dominantTemperature, colorDiversity, averageSaturation),
+    segmentationQuality: {
+      method,
+      confidence: quality === 'high' ? 'high' : quality === 'medium' ? 'medium' : 'low',
+      foregroundDetected: !!foregroundMask && !usedFallback,
+      usedFallback,
+    },
+    extractionConfidence: {
+      overall: Math.round(((confidence + colorSeparation + namingQuality) / 3) * 100) / 100,
+      colorSeparation: Math.round(colorSeparation * 100) / 100,
+      namingQuality: Math.round(namingQuality * 100) / 100,
+    },
   };
 
   return {

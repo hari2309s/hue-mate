@@ -1,4 +1,4 @@
-import type { HSLValues, RGBValues } from '@hue-und-you/types';
+import type { RGBValues, HSLValues } from '@hue-und-you/types';
 import { rgbToHsl } from './colorConversion';
 
 // ============================================
@@ -78,7 +78,7 @@ export function generateCssVariableName(colorName: string): string {
 }
 
 // ============================================
-// HEURISTIC COLOR NAMING
+// COLOR NAMING SYSTEM
 // ============================================
 
 type ToneBucket = 'dark' | 'medium' | 'light';
@@ -99,15 +99,15 @@ const NEUTRAL_THRESHOLD = 12;
 const EARTH_SAT_THRESHOLD = 45;
 
 const NEUTRAL_NAMES: PaletteToneMap = {
-  dark: ['Obsidian Ash', 'Charcoal Drift', 'Inkstone Gray'],
-  medium: ['Fogbound Slate', 'Dove Feather', 'Silver Haze'],
-  light: ['Pearl Mist', 'Cloud Linen', 'Frosted Ivory'],
+  dark: ['Obsidian Ash', 'Charcoal Drift', 'Inkstone Gray', 'Shadow Slate', 'Steel Night'],
+  medium: ['Fogbound Slate', 'Dove Feather', 'Silver Haze', 'Stone Mist', 'Ash Cloud'],
+  light: ['Pearl Mist', 'Cloud Linen', 'Frosted Ivory', 'Moonlit Silk', 'Vapor White'],
 };
 
 const EARTH_TONES: PaletteToneMap = {
-  dark: ['Roasted Umber', 'Espresso Soil', 'Chestnut Bark'],
-  medium: ['Copper Canyon', 'Amber Clay', 'Russet Trail'],
-  light: ['Sandstone Glow', 'Golden Wheat', 'Honey Dust'],
+  dark: ['Roasted Umber', 'Espresso Soil', 'Chestnut Bark', 'Mahogany Shadow', 'Coffee Bean'],
+  medium: ['Copper Canyon', 'Amber Clay', 'Russet Trail', 'Terra Sienna', 'Canyon Stone'],
+  light: ['Sandstone Glow', 'Golden Wheat', 'Honey Dust', 'Desert Sand', 'Warm Linen'],
 };
 
 const HUE_PALETTES: HuePalette[] = [
@@ -115,99 +115,99 @@ const HUE_PALETTES: HuePalette[] = [
     family: 'Crimson',
     range: [345, 20],
     names: {
-      dark: ['Garnet Night', 'Merlot Ember', 'Bloodstone Red'],
-      medium: ['Scarlet Bloom', 'Cherry Ember', 'Vermilion Pulse'],
-      light: ['Rose Dawn', 'Coral Blush', 'Petal Flame'],
+      dark: ['Garnet', 'Merlot', 'Burgundy', 'Wine Red', 'Ruby'],
+      medium: ['Scarlet', 'Cherry', 'Vermilion', 'Cardinal', 'Poppy'],
+      light: ['Rose', 'Coral', 'Blush', 'Pink', 'Salmon'],
     },
   },
   {
     family: 'Copper',
     range: [20, 45],
     names: {
-      dark: ['Molten Copper', 'Burnt Amber', 'Rust Ember'],
-      medium: ['Copper Glow', 'Spiced Tangerine', 'Sunset Amber'],
-      light: ['Apricot Halo', 'Golden Coral', 'Marmalade Light'],
+      dark: ['Copper', 'Burnt Sienna', 'Rust', 'Bronze', 'Clay'],
+      medium: ['Tangerine', 'Persimmon', 'Pumpkin', 'Terracotta', 'Autumn'],
+      light: ['Apricot', 'Peach', 'Coral', 'Melon', 'Cantaloupe'],
     },
   },
   {
     family: 'Solar',
     range: [45, 75],
     names: {
-      dark: ['Amber Honey', 'Goldenrod Ember', 'Ochre Horizon'],
-      medium: ['Sunbeam Gold', 'Citrine Gleam', 'Marigold Burst'],
-      light: ['Lemon Zest', 'Solar Glow', 'Champagne Dawn'],
+      dark: ['Amber', 'Goldenrod', 'Ochre', 'Bronze', 'Honey'],
+      medium: ['Sunflower', 'Citrine', 'Marigold', 'Saffron', 'Gold'],
+      light: ['Lemon', 'Butter', 'Champagne', 'Cream', 'Vanilla'],
     },
   },
   {
     family: 'Lime',
     range: [75, 110],
     names: {
-      dark: ['Verdigris Moss', 'Forest Lime', 'Jade Canopy'],
-      medium: ['Lime Grove', 'Spring Chartreuse', 'Citrus Leaf'],
-      light: ['Lime Mist', 'Wasabi Bloom', 'Key Lime Veil'],
+      dark: ['Olive', 'Moss', 'Forest', 'Jade', 'Hunter'],
+      medium: ['Lime', 'Chartreuse', 'Grass', 'Sage', 'Kiwi'],
+      light: ['Celery', 'Mint', 'Pistachio', 'Spring', 'Tea'],
     },
   },
   {
     family: 'Verdant',
     range: [110, 150],
     names: {
-      dark: ['Pine Shadow', 'Cedar Spruce', 'Moss Depths'],
-      medium: ['Verdant Meadow', 'Fern Current', 'Garden Green'],
-      light: ['Meadow Dew', 'Herb Tendril', 'Willow Veil'],
+      dark: ['Pine', 'Spruce', 'Evergreen', 'Jungle', 'Emerald'],
+      medium: ['Meadow', 'Fern', 'Clover', 'Kelly', 'Grass'],
+      light: ['Mint', 'Seafoam', 'Celadon', 'Sage', 'Laurel'],
     },
   },
   {
     family: 'Emerald',
     range: [150, 185],
     names: {
-      dark: ['Emerald Abyss', 'Jade Harbor', 'Deep Viridian'],
-      medium: ['Emerald Current', 'Rainforest Teal', 'Lagoon Emerald'],
-      light: ['Mint Foam', 'Seaglass Glow', 'Tidal Mint'],
+      dark: ['Teal', 'Jade', 'Viridian', 'Malachite', 'Cypress'],
+      medium: ['Emerald', 'Turquoise', 'Caribbean', 'Tropical', 'Aquamarine'],
+      light: ['Seafoam', 'Aqua', 'Mint', 'Sea Glass', 'Foam'],
     },
   },
   {
     family: 'Lagoon',
     range: [185, 210],
     names: {
-      dark: ['Atlantic Teal', 'Storm Surf', 'Ocean Shadow'],
-      medium: ['Lagoon Tide', 'Aqua Meridian', 'Sea Ridge'],
-      light: ['Tropical Surf', 'Aqua Drift', 'Coastal Mist'],
+      dark: ['Teal', 'Cyan', 'Ocean', 'Peacock', 'Marine'],
+      medium: ['Lagoon', 'Aqua', 'Turquoise', 'Caribbean', 'Teal'],
+      light: ['Sky Blue', 'Pool', 'Aqua', 'Ice', 'Mist'],
     },
   },
   {
     family: 'Azure',
     range: [210, 240],
     names: {
-      dark: ['Midnight Azure', 'Deep Cobalt', 'Indigo Surf'],
-      medium: ['Azure Horizon', 'Cobalt Wave', 'Cerulean Crest'],
-      light: ['Sky Arc', 'Glacial Azure', 'Icy Horizon'],
+      dark: ['Navy', 'Cobalt', 'Sapphire', 'Midnight', 'Indigo'],
+      medium: ['Azure', 'Cerulean', 'Sky', 'Ocean', 'Pacific'],
+      light: ['Powder Blue', 'Baby Blue', 'Periwinkle', 'Alice Blue', 'Ice'],
     },
   },
   {
     family: 'Indigo',
     range: [240, 275],
     names: {
-      dark: ['Twilight Indigo', 'Sapphire Void', 'Orion Blue'],
-      medium: ['Indigo Zephyr', 'Sapphire Aura', 'Blue Velvet'],
-      light: ['Periwinkle Glow', 'Iris Haze', 'Lavender Mist'],
+      dark: ['Indigo', 'Sapphire', 'Midnight', 'Royal', 'Navy'],
+      medium: ['Iris', 'Periwinkle', 'Cornflower', 'Blue Violet', 'Hyacinth'],
+      light: ['Lavender', 'Lilac', 'Wisteria', 'Mauve', 'Thistle'],
     },
   },
   {
     family: 'Violet',
     range: [275, 305],
     names: {
-      dark: ['Royal Amethyst', 'Nightshade Violet', 'Mulberry Eclipse'],
-      medium: ['Violet Bloom', 'Orchid Pulse', 'Amethyst Drift'],
-      light: ['Lilac Veil', 'Lavender Drift', 'Wisteria Bloom'],
+      dark: ['Amethyst', 'Purple', 'Plum', 'Eggplant', 'Grape'],
+      medium: ['Violet', 'Orchid', 'Purple', 'Iris', 'Heather'],
+      light: ['Lilac', 'Lavender', 'Orchid', 'Mauve', 'Periwinkle'],
     },
   },
   {
     family: 'Magenta',
     range: [305, 345],
     names: {
-      dark: ['Plum Eclipse', 'Berry Wine', 'Midnight Magenta'],
-      medium: ['Fuchsia Blaze', 'Magenta Bloom', 'Hot Orchid'],
-      light: ['Orchid Haze', 'Peony Glow', 'Neon Petal'],
+      dark: ['Plum', 'Mulberry', 'Wine', 'Eggplant', 'Maroon'],
+      medium: ['Fuchsia', 'Magenta', 'Hot Pink', 'Cerise', 'Orchid'],
+      light: ['Pink', 'Rose', 'Peony', 'Carnation', 'Blush'],
     },
   },
 ];
@@ -225,19 +225,15 @@ function inHueRange(h: number, [start, end]: [number, number]): boolean {
   return h >= start || h < end;
 }
 
-function getToneBucket(lightness: number): ToneBucket {
-  if (lightness <= 35) return 'dark';
-  if (lightness >= 70) return 'light';
-  return 'medium';
-}
+function getToneBucket(lightness: number, saturation: number): ToneBucket {
+  // Adjust thresholds based on saturation
+  // High saturation colors appear lighter, so use stricter thresholds
+  const darknessThreshold = saturation > 60 ? 40 : 35;
+  const lightnessThreshold = saturation > 60 ? 65 : 70;
 
-function pickFromToneMap(map: PaletteToneMap, tone: ToneBucket, seed: number): string {
-  const options = map[tone] ?? map.medium;
-  if (!options.length) {
-    return map.medium[0] ?? 'Color';
-  }
-  const index = Math.abs(seed) % options.length;
-  return options[index];
+  if (lightness <= darknessThreshold) return 'dark';
+  if (lightness >= lightnessThreshold) return 'light';
+  return 'medium';
 }
 
 function isNeutralColor(hsl: HSLValues): boolean {
@@ -255,49 +251,202 @@ function getHuePalette(h: number): HuePalette {
   return HUE_PALETTES.find((palette) => inHueRange(hue, palette.range)) ?? HUE_PALETTES[0];
 }
 
-function getTextureDescriptor(saturation: number, tone: ToneBucket): string | null {
-  if (saturation <= 18) {
-    return tone === 'light' ? 'Soft' : 'Muted';
+/**
+ * Get intensity descriptor based on saturation and lightness
+ * More conservative - only add descriptors when truly needed
+ */
+function getIntensityDescriptor(
+  saturation: number,
+  lightness: number,
+  tone: ToneBucket
+): string | null {
+  // Very low saturation - always describe neutrals
+  if (saturation <= 15) {
+    if (tone === 'light') return 'Soft';
+    if (tone === 'dark') return 'Deep';
+    return 'Muted';
   }
-  if (saturation >= 70) {
-    return tone === 'light' ? 'Luminous' : 'Vivid';
+
+  // For low-medium saturation, skip descriptor (palette names are enough)
+  if (saturation <= 30) {
+    return null;
   }
-  if (tone === 'dark') {
-    return 'Deep';
+
+  // High saturation - be selective
+  if (saturation >= 75) {
+    if (lightness >= 50 && lightness <= 75) {
+      return 'Vivid'; // True vivid: high sat + medium-light
+    } else if (lightness > 85) {
+      return 'Bright'; // Very light + high sat
+    } else if (lightness < 30) {
+      return 'Deep'; // Dark + high sat
+    }
+    return null; // Skip for other cases
   }
-  if (tone === 'light' && saturation <= 40) {
-    return 'Airy';
+
+  // Medium-high saturation (50-75)
+  if (saturation >= 50) {
+    if (tone === 'dark' && lightness < 30) return 'Rich';
+    if (tone === 'light' && lightness > 80) return 'Luminous';
+    return null; // Skip descriptor for medium tones
   }
+
+  // Medium saturation (30-50) - mostly skip
+  if (saturation >= 35) {
+    if (tone === 'dark' && lightness < 25) return 'Dusky';
+    return null;
+  }
+
   return null;
+}
+
+/**
+ * Smart name selection that avoids duplicates within a palette
+ */
+class PaletteNameTracker {
+  private usedBaseNames = new Set<string>();
+  private usedDescriptors = new Set<string>();
+  private descriptorCount: Record<string, number> = {};
+
+  pickName(map: PaletteToneMap, tone: ToneBucket, seed: number): string {
+    const options = map[tone] ?? map.medium;
+    if (!options.length) return map.medium[0] ?? 'Color';
+
+    // Try to find an unused name
+    for (let offset = 0; offset < options.length; offset++) {
+      const index = (Math.abs(seed) + offset) % options.length;
+      const candidate = options[index];
+
+      if (!this.usedBaseNames.has(candidate.toLowerCase())) {
+        this.usedBaseNames.add(candidate.toLowerCase());
+        return candidate;
+      }
+    }
+
+    // All names used - fall back to first option with a number
+    const base = options[Math.abs(seed) % options.length];
+    const count = (this.descriptorCount[base] || 0) + 1;
+    this.descriptorCount[base] = count;
+    return `${base} ${count + 1}`;
+  }
+
+  pickDescriptor(descriptor: string | null): string | null {
+    if (!descriptor) return null;
+
+    // Limit descriptor repetition
+    const count = this.usedDescriptors.has(descriptor)
+      ? (this.descriptorCount[descriptor] || 0) + 1
+      : 0;
+
+    // If a descriptor is used more than twice, skip it
+    if (count >= 2) return null;
+
+    this.usedDescriptors.add(descriptor);
+    this.descriptorCount[descriptor] = count;
+    return descriptor;
+  }
+}
+
+// Module-level tracker
+let paletteTracker = new PaletteNameTracker();
+
+/**
+ * Reset the palette name tracker (called at the start of each extraction)
+ */
+export function resetPaletteNameTracker(): void {
+  paletteTracker = new PaletteNameTracker();
+}
+
+/**
+ * Check if a base name already contains intensity descriptors
+ * that would conflict with the proposed descriptor
+ */
+function hasConflictingDescriptor(baseName: string, descriptor: string): boolean {
+  const lowerBase = baseName.toLowerCase();
+  const lowerDesc = descriptor.toLowerCase();
+
+  // Direct inclusion
+  if (lowerBase.includes(lowerDesc)) return true;
+
+  // Conflicting intensity pairs
+  const conflicts: Record<string, string[]> = {
+    vivid: ['muted', 'dusky', 'soft', 'pale', 'deep'],
+    muted: ['vivid', 'bright', 'luminous'],
+    deep: ['bright', 'luminous', 'soft', 'pale'],
+    bright: ['deep', 'dusky', 'muted'],
+    luminous: ['deep', 'dusky', 'muted'],
+    soft: ['vivid', 'deep'],
+    pale: ['vivid', 'deep'],
+  };
+
+  // Check if base contains conflicting words
+  const conflictWords = conflicts[lowerDesc] || [];
+  for (const conflict of conflictWords) {
+    if (lowerBase.includes(conflict)) return true;
+  }
+
+  // Check if base already has common descriptor words
+  const descriptorWords = [
+    'glow',
+    'gleam',
+    'ember',
+    'flame',
+    'blaze',
+    'burst',
+    'haze',
+    'mist',
+    'drift',
+    'veil',
+    'shadow',
+    'night',
+    'dawn',
+    'dusk',
+    'light',
+    'dark',
+    'bright',
+  ];
+
+  for (const word of descriptorWords) {
+    if (lowerBase.includes(word)) {
+      // Base already has descriptive quality, skip adding another
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function finalizeName(base: string, descriptor: string | null): string {
   if (!descriptor) return base;
-  const lowerBase = base.toLowerCase();
-  if (lowerBase.includes(descriptor.toLowerCase())) {
-    return base;
+
+  // Check for conflicts or redundancy
+  if (hasConflictingDescriptor(base, descriptor)) {
+    return base; // Use base name as-is
   }
+
   return `${descriptor} ${base}`;
 }
 
 /**
- * Generate color name using heuristics + curated palette
+ * Generate color name using improved heuristics + palette tracking
  */
 export function generateColorName(rgb: RGBValues): string {
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-  const tone = getToneBucket(hsl.l);
+  const tone = getToneBucket(hsl.l, hsl.s);
   const seed = Math.round(hsl.h * 17 + hsl.s * 13 + hsl.l * 11);
 
   if (isNeutralColor(hsl)) {
-    return pickFromToneMap(NEUTRAL_NAMES, tone, seed);
+    return paletteTracker.pickName(NEUTRAL_NAMES, tone, seed);
   }
 
   if (isEarthyTone(hsl)) {
-    return pickFromToneMap(EARTH_TONES, tone, seed);
+    return paletteTracker.pickName(EARTH_TONES, tone, seed);
   }
 
   const palette = getHuePalette(hsl.h);
-  const base = pickFromToneMap(palette.names, tone, seed);
-  const descriptor = getTextureDescriptor(hsl.s, tone);
+  const base = paletteTracker.pickName(palette.names, tone, seed);
+  const rawDescriptor = getIntensityDescriptor(hsl.s, hsl.l, tone);
+  const descriptor = paletteTracker.pickDescriptor(rawDescriptor);
+
   return finalizeName(base, descriptor);
 }
