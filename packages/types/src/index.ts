@@ -126,6 +126,8 @@ export interface SegmentInfo {
   foreground: { pixel_percentage: number };
   background: { pixel_percentage: number };
   categories: string[];
+  method?: 'mask2former' | 'fallback-luminance';
+  quality?: 'high' | 'medium' | 'low';
 }
 
 // Export Formats
@@ -159,6 +161,17 @@ export interface ExtractionMetadata {
   averageSaturation: number;
   dominantTemperature: 'warm' | 'cool' | 'neutral';
   suggestedUsage: string;
+  segmentationQuality: {
+    method: 'mask2former' | 'segformer' | 'fallback-luminance';
+    confidence: 'high' | 'medium' | 'low';
+    foregroundDetected: boolean;
+    usedFallback: boolean;
+  };
+  extractionConfidence: {
+    overall: number; // 0-1
+    colorSeparation: number; // How well colors were separated
+    namingQuality: number; // How confident we are in color names
+  };
 }
 
 // Upload Status
