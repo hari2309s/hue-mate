@@ -1,7 +1,15 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Clock, Palette, Thermometer, Sparkles, AlertCircle } from 'lucide-react';
+import {
+  Clock,
+  Palette,
+  Thermometer,
+  Sparkles,
+  AlertCircle,
+  Layers,
+  TrendingUp,
+} from 'lucide-react';
 import type { ExtractionMetadata } from '@hue-und-you/types';
 
 interface ExtractionMetadataProps {
@@ -31,9 +39,27 @@ const ExtractionMetadata = ({ metadata, showWarning = false }: ExtractionMetadat
     return 'text-gray-500';
   };
 
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return 'text-green-500';
+    if (confidence >= 0.6) return 'text-yellow-500';
+    return 'text-orange-500';
+  };
+
+  const getQualityBadge = (quality: 'high' | 'medium' | 'low') => {
+    const colors = {
+      high: 'bg-green-500/10 text-green-600 border-green-500/20',
+      medium: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+      low: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+    };
+    return colors[quality];
+  };
+
   const processingSeconds = (metadata.processingTimeMs / 1000).toFixed(2);
   const algorithmLabel =
     metadata.algorithm === 'weighted-kmeans' ? 'Weighted K-means++' : 'K-means++';
+
+  const segQuality = metadata.segmentationQuality;
+  const confidence = metadata.extractionConfidence;
 
   return (
     <motion.div
@@ -48,6 +74,37 @@ const ExtractionMetadata = ({ metadata, showWarning = false }: ExtractionMetadat
         <span className="text-var(--foreground)">
           Extracted in <span className="font-semibold">{processingSeconds}s</span> using{' '}
           <span className="font-semibold">{algorithmLabel}</span>
+        </span>
+      </div>
+
+      {/* Segmentation Quality */}
+      <div className="flex items-center gap-3 text-sm">
+        <Layers className="h-5 w-5 text-soft-orange shrink-0" />
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-var(--foreground)">Segmentation:</span>
+          <span
+            className={`px-2 py-0.5 rounded text-xs font-medium border ${getQualityBadge(segQuality.confidence)}`}
+          >
+            {segQuality.confidence.toUpperCase()}
+          </span>
+          <span className="text-var(--muted-foreground) text-xs">
+            ({segQuality.method === 'mask2former' ? 'AI Model' : 'Fallback Method'})
+          </span>
+        </div>
+      </div>
+
+      {/* Overall Extraction Confidence */}
+      <div className="flex items-center gap-3 text-sm">
+        <TrendingUp className="h-5 w-5 text-soft-orange shrink-0" />
+        <span className="text-var(--foreground)">
+          Extraction Confidence:{' '}
+          <span className={`font-semibold ${getConfidenceColor(confidence.overall)}`}>
+            {Math.round(confidence.overall * 100)}%
+          </span>
+          <span className="text-var(--muted-foreground) text-xs ml-2">
+            (separation: {Math.round(confidence.colorSeparation * 100)}%, naming:{' '}
+            {Math.round(confidence.namingQuality * 100)}%)
+          </span>
         </span>
       </div>
 
@@ -98,18 +155,42 @@ const ExtractionMetadata = ({ metadata, showWarning = false }: ExtractionMetadat
         <span className="text-var(--foreground)">{metadata.suggestedUsage}</span>
       </div>
 
-      {/* Warning for low saturation or diversity */}
-      {showWarning && (metadata.averageSaturation < 25 || metadata.colorDiversity < 0.3) && (
-        <div className="flex items-start gap-3 text-sm rounded-md bg-yellow-500/10 border border-yellow-500/20 p-3">
-          <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
-          <span className="text-yellow-700">
-            {metadata.averageSaturation < 25 && metadata.colorDiversity < 0.3
-              ? 'Image has low color saturation and diversity. Try boosting vibrant colors.'
-              : metadata.averageSaturation < 25
-                ? 'Image has low color saturation. Consider images with more vibrant colors.'
-                : 'Color diversity is low. Multiple extracted colors may be similar.'}
-          </span>
-        </div>
+      {/* Warning for low quality or fallback methods */}
+      {showWarning && (
+        <>
+          {segQuality.usedFallback && (
+            <div className="flex items-start gap-3 text-sm rounded-md bg-blue-500/10 border border-blue-500/20 p-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+              <span className="text-blue-700">
+                AI segmentation unavailable. Used fallback method for foreground/background
+                separation. Results may be less accurate.
+              </span>
+            </div>
+          )}
+
+          {(metadata.averageSaturation < 25 || metadata.colorDiversity < 0.3) && (
+            <div className="flex items-start gap-3 text-sm rounded-md bg-yellow-500/10 border border-yellow-500/20 p-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
+              <span className="text-yellow-700">
+                {metadata.averageSaturation < 25 && metadata.colorDiversity < 0.3
+                  ? 'Image has low color saturation and diversity. Try images with more vibrant, varied colors.'
+                  : metadata.averageSaturation < 25
+                    ? 'Image has low color saturation. Consider images with more vibrant colors.'
+                    : 'Color diversity is low. Multiple extracted colors may be similar.'}
+              </span>
+            </div>
+          )}
+
+          {confidence.overall < 0.7 && (
+            <div className="flex items-start gap-3 text-sm rounded-md bg-orange-500/10 border border-orange-500/20 p-3">
+              <AlertCircle className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+              <span className="text-orange-700">
+                Extraction confidence is moderate. Colors may not be as accurately separated or
+                named as expected.
+              </span>
+            </div>
+          )}
+        </>
       )}
     </motion.div>
   );
