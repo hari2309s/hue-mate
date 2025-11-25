@@ -1,6 +1,6 @@
 # hue-und-you
 
-ML-driven perceptual color extraction that turns any image into a production-ready palette: 11-step OKLCH scales, Tailwind config, Figma tokens, CSS variables. Built for designers who ship.
+ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS/SCSS custom properties. Built for designers who ship.
 
 ## Features
 - Foreground/background + semantic segmentation with Hugging Face models and robust luminance fallback
@@ -9,7 +9,7 @@ ML-driven perceptual color extraction that turns any image into a production-rea
 - Heuristic color naming with palette-aware uniqueness and Pantone approximation
 - Accessibility info (WCAG contrast on white/black and APCA-like metric) with suggested text color
 - Tints and shades generation and classic harmonies (complementary, analogous, triadic, split)
-- One-click export: CSS variables (11 steps), SCSS variables, Tailwind `extend.colors`, Figma tokens, Swift/Kotlin code
+- One-click export: CSS variables (11 steps), SCSS variables, Tailwind `extend.colors`, Figma variables
 
 ## Monorepo Structure
 - `apps/api` — Express + tRPC service that runs the extraction pipeline
