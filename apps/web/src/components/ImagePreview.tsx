@@ -16,7 +16,7 @@ export default function ImagePreview({ imageSrc }: ImagePreviewProps) {
       transition={{ duration: 0.25 }}
       whileHover={{ scale: 1.01 }}
       style={{ borderColor: imageSrc ? 'var(--color-soft-orange)' : 'var(--muted-foreground)' }}
-      className="flex h-full min-h-[320px] w-full items-center justify-center rounded-md border border-dashed bg-var(--card)"
+      className="flex h-full min-h-80 w-full items-center justify-center rounded-md border border-dashed bg-var(--card)"
     >
       <AnimatePresence mode="wait">
         {imageSrc ? (
@@ -26,7 +26,7 @@ export default function ImagePreview({ imageSrc }: ImagePreviewProps) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.3 }}
-            className="relative h-full w-full min-h-[320px] overflow-hidden rounded-[calc(var(--radius-2xl)-2px)] bg-var(--muted)"
+            className="relative h-full w-full min-h-80 overflow-hidden rounded-[calc(var(--radius-2xl)-2px)] bg-var(--muted)"
           >
             <Image
               src={imageSrc}
@@ -55,4 +55,3 @@ export default function ImagePreview({ imageSrc }: ImagePreviewProps) {
     </motion.div>
   );
 }
-

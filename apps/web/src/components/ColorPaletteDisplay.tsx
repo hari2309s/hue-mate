@@ -176,6 +176,7 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
 const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
   const [showExports, setShowExports] = useState(false);
   const [copiedExport, setCopiedExport] = useState<string | null>(null);
+
   const copyExport = async (content: string, label: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedExport(label);
