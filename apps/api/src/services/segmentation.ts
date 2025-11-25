@@ -193,6 +193,9 @@ export async function segmentForegroundBackground(
       .toBuffer();
 
     console.log(`   ✓ Foreground: ${foreground_percentage.toFixed(1)}%`);
+    console.log(
+      `   → Detected segments: ${segments.map((s) => `${s.label}(${s.score.toFixed(2)})`).join(', ')}`
+    );
 
     return { mask: finalMaskBuffer, foreground_percentage };
   } catch (error) {

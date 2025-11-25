@@ -7,11 +7,8 @@ import { rgbToOklab, oklabToOklch, oklchToRgb, rgbToHsl } from './colorConversio
 
 function kMeansPlusPlus(pixels: PixelWithOklab[], k: number): PixelWithOklab[] {
   const centroids: PixelWithOklab[] = [];
-
-  // First centroid: random
   centroids.push({ ...pixels[Math.floor(Math.random() * pixels.length)] });
 
-  // Remaining centroids: weighted by distance
   for (let i = 1; i < k; i++) {
     const distances = pixels.map((pixel) => {
       const minDist = Math.min(
@@ -19,10 +16,11 @@ function kMeansPlusPlus(pixels: PixelWithOklab[], k: number): PixelWithOklab[] {
           const dl = pixel.oklab.l - c.oklab.l;
           const da = pixel.oklab.a - c.oklab.a;
           const db = pixel.oklab.b - c.oklab.b;
-          return Math.sqrt(dl * dl + da * da + db * db);
+          // INCREASE chroma/hue importance even more
+          return Math.sqrt(dl * dl + da * da * 4 + db * db * 4);
         })
       );
-      return minDist * minDist;
+      return minDist * minDist * minDist;
     });
 
     const totalDist = distances.reduce((sum, d) => sum + d, 0);
@@ -53,40 +51,27 @@ export function applySaturationBias(pixels: PixelData[]): PixelData[] {
 
   for (const pixel of pixels) {
     const hsl = rgbToHsl(pixel.r, pixel.g, pixel.b);
-    const saturation = hsl.s; // 0-100
+    const saturation = hsl.s;
 
-    // Calculate boost factor based on saturation
-    // Ultra-saturated (>75%): 5x weight
-    // Very saturated (50-75%): 3x weight
-    // Moderately saturated (25-50%): 1.5x weight
-    // Low saturation (<25%): 1x weight (no boost)
     let saturationBoost = 1;
 
     if (saturation > 75) {
-      // Highly vibrant colors - give them strong presence
-      saturationBoost = Math.pow(saturation / 100, 2.2) * 5;
+      saturationBoost = Math.pow(saturation / 100, 1.5) * 12;
     } else if (saturation > 50) {
-      // Very saturated - boost them
-      saturationBoost = Math.pow(saturation / 100, 2.0) * 3;
+      saturationBoost = Math.pow(saturation / 100, 1.6) * 7;
     } else if (saturation > 25) {
-      // Moderately saturated - slight boost
-      saturationBoost = Math.pow(saturation / 100, 1.5) * 1.5;
+      saturationBoost = Math.pow(saturation / 100, 1.3) * 2.5;
     } else {
-      // Low saturation (mostly grays/neutrals) - keep neutral weight
-      saturationBoost = 1;
+      saturationBoost = 0.3;
     }
 
-    // Additionally boost pixels that are neither too dark nor too bright
-    // (middle tones tend to be more visually important)
-    const lightness = hsl.l; // 0-100
+    const lightness = hsl.l;
     if (lightness >= 20 && lightness <= 80) {
-      saturationBoost *= 1.2; // 20% boost for mid-tone colors
+      saturationBoost *= 1.8;
     }
 
-    // Ensure minimum 1 repetition, maximum reasonable limit
-    const repetitions = Math.max(1, Math.min(10, Math.round(saturationBoost)));
+    const repetitions = Math.max(1, Math.min(20, Math.round(saturationBoost)));
 
-    // Add pixel multiple times based on boost
     for (let i = 0; i < repetitions; i++) {
       biased.push({ r: pixel.r, g: pixel.g, b: pixel.b });
     }

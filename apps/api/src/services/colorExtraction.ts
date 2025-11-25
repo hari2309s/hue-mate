@@ -16,7 +16,7 @@ import {
   splitPixelsByLuminance,
 } from './segmentation';
 import { kMeansClusteringOklab, applySaturationBias } from './clustering';
-import { buildColorFormats } from './colorConversion';
+import { buildColorFormats, rgbToHsl, rgbToOklab } from './colorConversion';
 import { buildAccessibilityInfo } from './accessibility';
 import {
   findNearestPantone,
@@ -26,7 +26,7 @@ import {
 } from './colorNaming';
 import { generateHarmonies, generateTintsAndShades } from './colorHarmony';
 import { generateExports } from './exportFormats';
-import { SegmentResult } from '../types/segmentation';
+import { PixelWithWeight, SegmentResult } from '../types/segmentation';
 
 interface ExtractionHooks {
   onPartial?: (colors: ExtractedColor[]) => void;
@@ -65,30 +65,42 @@ function computeColorDiversity(colors: ExtractedColor[]): number {
 }
 
 function computeColorSeparation(colors: ExtractedColor[]): number {
-  // Calculate average distance between colors in OKLCH space
   if (colors.length < 2) return 1.0;
 
   let totalDistance = 0;
   let count = 0;
+  const distances: number[] = [];
 
   for (let i = 0; i < colors.length; i++) {
     for (let j = i + 1; j < colors.length; j++) {
       const c1 = colors[i].formats.oklch.values;
       const c2 = colors[j].formats.oklch.values;
 
-      const dl = c1.l - c2.l;
-      const dc = c1.c - c2.c;
-      const dh = Math.min(Math.abs(c1.h - c2.h), 360 - Math.abs(c1.h - c2.h));
+      const dl = (c1.l - c2.l) * 100;
+      const dc = (c1.c - c2.c) * 250;
 
-      const distance = Math.sqrt(dl * dl + dc * dc + (dh / 360) * (dh / 360));
+      let dh = Math.abs(c1.h - c2.h);
+      if (dh > 180) dh = 360 - dh;
+      dh = dh * 1.5;
+
+      const distance = Math.sqrt(dl * dl + dc * dc + dh * dh);
+
+      distances.push(distance);
       totalDistance += distance;
       count++;
     }
   }
 
   const avgDistance = totalDistance / count;
-  // Normalize to 0-1 range (assuming max meaningful distance is ~2)
-  return Math.min(1.0, avgDistance / 2.0);
+  const minDistance = Math.min(...distances);
+  const maxDistance = Math.max(...distances);
+
+  console.log(
+    `   → Color distances: min=${minDistance.toFixed(1)}, avg=${avgDistance.toFixed(1)}, max=${maxDistance.toFixed(1)}`
+  );
+
+  const normalized = Math.max(0, Math.min(1, (avgDistance - 40) / 60));
+  return Math.round(normalized * 100) / 100;
 }
 
 function resolveDominantTemperature(colors: ExtractedColor[]): 'warm' | 'cool' | 'neutral' {
@@ -296,13 +308,117 @@ export async function extractColorsFromImage(
   const biasedFgPixels = applySaturationBiasToPixels(fgPixels);
   const biasedBgPixels = applySaturationBiasToPixels(bgPixels);
 
-  const dominantFgColors =
-    biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount) : [];
-  const dominantBgColors =
-    biasedBgPixels.length > 0 ? kMeansClusteringOklab(biasedBgPixels, bgColorCount) : [];
+  // POST-CLUSTERING DEDUPLICATION
+  function deduplicateSimilarColors(
+    colors: PixelWithWeight[],
+    minDistance: number = 0.25
+  ): PixelWithWeight[] {
+    if (colors.length === 0) return [];
+
+    const unique: PixelWithWeight[] = [colors[0]];
+
+    for (let i = 1; i < colors.length; i++) {
+      const color = colors[i];
+      const oklab = rgbToOklab(color.r, color.g, color.b);
+
+      let isTooSimilar = false;
+      let closestIndex = -1;
+      let minDist = Infinity;
+
+      for (let j = 0; j < unique.length; j++) {
+        const existingOklab = rgbToOklab(unique[j].r, unique[j].g, unique[j].b);
+        const dl = oklab.l - existingOklab.l;
+        const da = oklab.a - existingOklab.a;
+        const db = oklab.b - existingOklab.b;
+
+        // Increase hue/chroma weighting even more
+        const dist = Math.sqrt(dl * dl * 1.5 + da * da * 5 + db * db * 5);
+
+        if (dist < minDist) {
+          minDist = dist;
+          closestIndex = j;
+        }
+
+        if (dist < minDistance) {
+          isTooSimilar = true;
+          break;
+        }
+      }
+
+      if (!isTooSimilar) {
+        unique.push(color);
+      } else if (closestIndex >= 0) {
+        unique[closestIndex].weight += color.weight;
+      }
+    }
+
+    return unique.sort((a, b) => b.weight - a.weight);
+  }
+
+  function enforceHueDiversity(
+    colors: PixelWithWeight[],
+    minHueDifference: number = 30
+  ): PixelWithWeight[] {
+    if (colors.length === 0) return [];
+
+    const diverse: PixelWithWeight[] = [colors[0]];
+
+    for (let i = 1; i < colors.length; i++) {
+      const color = colors[i];
+      const hsl = rgbToHsl(color.r, color.g, color.b);
+
+      // Skip very low saturation colors (neutrals) from hue check
+      if (hsl.s < 15) {
+        diverse.push(color);
+        continue;
+      }
+
+      let hueTooSimilar = false;
+
+      for (const existing of diverse) {
+        const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
+
+        // Skip if comparing with a neutral
+        if (existingHsl.s < 15) continue;
+
+        // Calculate hue difference (accounting for circular nature)
+        let hueDiff = Math.abs(hsl.h - existingHsl.h);
+        if (hueDiff > 180) hueDiff = 360 - hueDiff;
+
+        // Also check if saturations are similar
+        const satDiff = Math.abs(hsl.s - existingHsl.s);
+
+        // Too similar if within hue range AND similar saturation
+        if (hueDiff < minHueDifference && satDiff < 20) {
+          hueTooSimilar = true;
+          break;
+        }
+      }
+
+      if (!hueTooSimilar) {
+        diverse.push(color);
+      }
+    }
+
+    return diverse;
+  }
+
+  const rawFgColors =
+    biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount * 3) : [];
+  const rawBgColors =
+    biasedBgPixels.length > 0 ? kMeansClusteringOklab(biasedBgPixels, bgColorCount * 3) : [];
+
+  const dominantFgColors = enforceHueDiversity(deduplicateSimilarColors(rawFgColors)).slice(
+    0,
+    fgColorCount
+  );
+  const dominantBgColors = enforceHueDiversity(deduplicateSimilarColors(rawBgColors)).slice(
+    0,
+    bgColorCount
+  );
 
   console.log(
-    `   ✓ Extracted ${dominantFgColors.length} foreground + ${dominantBgColors.length} background colors`
+    `   ✓ After deduplication: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG colors`
   );
 
   // ============================================
