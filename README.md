@@ -1,5 +1,26 @@
 # hue-und-you
 
+<div align="left">
+
+[![pnpm](https://img.shields.io/badge/pnpm-Workspace-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![TurboRepo](https://img.shields.io/badge/TurboRepo-Monorepo-000000?logo=turborepo&logoColor=white)](https://turbo.build/repo)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-API-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![tRPC](https://img.shields.io/badge/tRPC-API-398CCB?logo=trpc&logoColor=white)](https://trpc.io/)
+[![Zod](https://img.shields.io/badge/Zod-Schema-3E67B1?logo=zod&logoColor=white)](https://zod.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Sharp](https://img.shields.io/badge/Sharp-Image-00C853?logo=sharp&logoColor=white)](https://sharp.pixelplumbing.com/)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models-FFCA00?logo=huggingface&logoColor=black)](https://huggingface.co/)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-2FB344?logo=drizzle&logoColor=white)](https://orm.drizzle.team/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-DB-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Render](https://img.shields.io/badge/Render-Deploy-46E3B7?logo=render&logoColor=white)](https://render.com/)
+[![License: ISC](https://img.shields.io/badge/License-ISC-lightgrey.svg)](https://opensource.org/licenses/ISC)
+
+</div>
+
 ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS/SCSS custom properties. Built for designers who ship.
 
 ## Features
