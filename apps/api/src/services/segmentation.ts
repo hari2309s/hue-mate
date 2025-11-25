@@ -90,7 +90,74 @@ const FOREGROUND_LABELS = new Set([
   'teddy bear',
   'hair drier',
   'toothbrush',
+  'traffic light',
+  'fire hydrant',
+  'stop sign',
+  'parking meter',
+  'bench',
+  'street sign',
+  'streetlight',
+  'light',
+  'tower',
+  'pole',
+  'post',
+  'mailbox',
+  'signboard',
+  'banner',
+  'flag',
+  'tree',
+  'plant',
+  'flower',
+  'bush',
+  'sculpture',
+  'statue',
+  'monument',
+  'fountain',
 ]);
+
+const AMBIGUOUS_LABELS = new Set(['tree-merged', 'building-other-merged', 'wall', 'fence']);
+
+function classifySegment(
+  label: string,
+  score: number,
+  allSegments: SegmentResult[]
+): 'foreground' | 'background' | 'uncertain' {
+  const lowerLabel = label.toLowerCase();
+
+  // Definite foreground
+  if (FOREGROUND_LABELS.has(lowerLabel)) {
+    return 'foreground';
+  }
+
+  // Definite background (sky, road, etc.)
+  if (
+    lowerLabel.includes('sky') ||
+    lowerLabel.includes('road') ||
+    lowerLabel.includes('pavement') ||
+    lowerLabel.includes('ground') ||
+    lowerLabel.includes('grass-merged') ||
+    lowerLabel.includes('sea')
+  ) {
+    return 'background';
+  }
+
+  // Ambiguous - use heuristics
+  if (AMBIGUOUS_LABELS.has(lowerLabel)) {
+    // If this is a high-confidence, small segment, it might be foreground
+    // (e.g., a featured tree or building facade)
+    const segmentCount = allSegments.length;
+
+    if (score > 0.95 && segmentCount > 3) {
+      // Likely a distinct foreground element
+      return 'uncertain'; // Let the caller decide
+    }
+
+    return 'background';
+  }
+
+  // Unknown label - conservative approach
+  return 'background';
+}
 
 // ============================================
 // FOREGROUND/BACKGROUND SEGMENTATION
@@ -126,26 +193,24 @@ export async function segmentForegroundBackground(
     const segments = (await response.json()) as SegmentResult[];
 
     if (!Array.isArray(segments) || segments.length === 0) {
-      console.log('   ✗ No segments returned from Mask2Former');
       return null;
     }
 
     console.log(`   ✓ Received ${segments.length} segments from Mask2Former`);
 
-    // Get image dimensions
     const { width, height } = await sharp(imageBuffer).metadata();
     if (!width || !height) {
-      console.log('   ✗ Could not get image dimensions');
       return null;
     }
 
-    // Create combined foreground mask
     const maskArray = new Uint8Array(width * height);
+    let foregroundSegmentCount = 0;
 
     for (const segment of segments) {
-      const isForeground = FOREGROUND_LABELS.has(segment.label.toLowerCase());
+      const classification = classifySegment(segment.label, segment.score, segments);
 
-      if (isForeground && segment.mask) {
+      // Use both definite foreground and uncertain segments
+      if ((classification === 'foreground' || classification === 'uncertain') && segment.mask) {
         try {
           const maskBuffer = Buffer.from(segment.mask, 'base64');
           const { data: segmentMaskData } = await sharp(maskBuffer)
@@ -154,15 +219,15 @@ export async function segmentForegroundBackground(
             .raw()
             .toBuffer({ resolveWithObject: true });
 
-          // OR operation - combine masks
           for (let i = 0; i < maskArray.length && i < segmentMaskData.length; i++) {
             if (segmentMaskData[i] > 128) {
               maskArray[i] = 255;
             }
           }
 
+          foregroundSegmentCount++;
           console.log(
-            `   ✓ Added foreground segment: ${segment.label} (score: ${segment.score.toFixed(2)})`
+            `   ✓ Added ${classification} segment: ${segment.label} (score: ${segment.score.toFixed(2)})`
           );
         } catch {
           console.log(`   ⚠ Failed to process mask for ${segment.label}`);
@@ -170,22 +235,34 @@ export async function segmentForegroundBackground(
       }
     }
 
-    // Calculate foreground percentage
+    if (foregroundSegmentCount === 0) {
+      console.log('   ⚠ No foreground segments identified');
+      return null;
+    }
+
     let foregroundPixels = 0;
     for (let i = 0; i < maskArray.length; i++) {
       if (maskArray[i] > 128) foregroundPixels++;
     }
     const foreground_percentage = (foregroundPixels / maskArray.length) * 100;
 
-    // Only return mask if there's actually foreground detected
-    if (foreground_percentage < 0.5) {
+    // IMPROVED: More flexible thresholds
+    // - Allow very small foreground (architectural details, distant objects)
+    // - Only reject if literally no foreground or completely dominant
+    if (foreground_percentage < 0.1) {
       console.log(
-        `   ⚠ Foreground too small (${foreground_percentage.toFixed(1)}%), ignoring mask`
+        `   ⚠ Foreground too small (${foreground_percentage.toFixed(2)}%), ignoring mask`
       );
       return null;
     }
 
-    // Convert to PNG buffer
+    if (foreground_percentage > 98) {
+      console.log(
+        `   ⚠ Foreground too large (${foreground_percentage.toFixed(1)}%), likely segmentation error`
+      );
+      return null;
+    }
+
     const finalMaskBuffer = await sharp(Buffer.from(maskArray), {
       raw: { width, height, channels: 1 },
     })
@@ -213,12 +290,26 @@ export async function segmentForegroundBackground(
 
 export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResult[]> {
   try {
+    console.log('🔍 === SEMANTIC SEGMENTATION DEBUG START ===');
+    console.log('   → API URL:', `${HF_API_URL}/${SEGFORMER_MODEL}`);
+    console.log('   → Original image buffer size:', imageBuffer.length, 'bytes');
+    console.log('   → HF Token present:', !!HF_TOKEN);
+
+    if (!HF_TOKEN) {
+      console.log('   ✗ CRITICAL: HF_TOKEN is not set!');
+      return [];
+    }
+
     console.log('   → Calling SegFormer for semantic segmentation...');
+    console.log('   → Resizing image to 640x640...');
 
     const resizedBuffer = await sharp(imageBuffer)
       .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
       .png()
       .toBuffer();
+
+    console.log('   → Resized buffer size:', resizedBuffer.length, 'bytes');
+    const requestStart = Date.now();
 
     const response = await fetch(`${HF_API_URL}/${SEGFORMER_MODEL}`, {
       method: 'POST',
@@ -229,23 +320,75 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
       body: resizedBuffer,
     });
 
+    const requestDuration = Date.now() - requestStart;
+    console.log(`   → Request completed in ${requestDuration}ms`);
+    console.log('   → Response status:', response.status);
+    console.log('   → Response status text:', response.statusText);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.log('   ✗ Response NOT OK');
+      console.log('   ✗ Response body:', errorText);
+
       if (response.status === 503) {
-        console.log('   → Model loading, waiting 20 seconds...');
+        console.log('   → Model loading (503 status), waiting 20 seconds...');
         await new Promise((r) => setTimeout(r, 20000));
+        console.log('   → Retrying after model load wait...');
         return segmentSemantic(imageBuffer);
       }
+
+      if (response.status === 401 || response.status === 403) {
+        console.log('   ✗ AUTHENTICATION ERROR - Check your HuggingFace API token');
+      }
+
       console.log(`   ✗ SegFormer failed with status ${response.status}`);
+      console.log('🔍 === SEMANTIC SEGMENTATION DEBUG END ===\n');
       return [];
     }
 
-    const results = (await response.json()) as SegmentResult[];
+    console.log('   → Response OK, parsing JSON...');
+    const responseText = await response.text();
+    console.log('   → Raw response text (first 300 chars):', responseText.substring(0, 300));
+
+    let results: SegmentResult[];
+    try {
+      results = JSON.parse(responseText) as SegmentResult[];
+      console.log('   ✓ Successfully parsed JSON response');
+      console.log('   → Response type:', typeof results);
+      console.log('   → Is array:', Array.isArray(results));
+    } catch (parseError) {
+      console.log('   ✗ JSON PARSE ERROR');
+      console.log('   → Error:', parseError);
+      console.log('   → Full response text:', responseText);
+      console.log('🔍 === SEMANTIC SEGMENTATION DEBUG END ===\n');
+      return [];
+    }
+
     console.log(`   ✓ Found ${results.length} semantic regions`);
+    if (results.length > 0) {
+      console.log('   → Region details:');
+      results.forEach((r, idx) => {
+        console.log(`      [${idx}] label: "${r.label}", score: ${r.score?.toFixed(3) || 'N/A'}`);
+      });
+    }
+    console.log('🔍 === SEMANTIC SEGMENTATION DEBUG END ===\n');
+
     return results;
   } catch (error) {
+    console.log('🔍 === SEMANTIC SEGMENTATION DEBUG - CAUGHT ERROR ===');
+    console.log('   ✗ Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.log('   ✗ Error message:', error instanceof Error ? error.message : String(error));
+    console.log('   ✗ Error stack:', error instanceof Error ? error.stack : 'N/A');
+
+    // Check for specific error types
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.log('   ✗ NETWORK ERROR - Check internet connection and API URL');
+    }
+
     console.log(
       `   ✗ SegFormer segmentation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
+    console.log('🔍 === SEMANTIC SEGMENTATION DEBUG END ===\n');
     return [];
   }
 }

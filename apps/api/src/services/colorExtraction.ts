@@ -154,13 +154,29 @@ async function performSegmentation(imageBuffer: Buffer): Promise<SegmentationRes
       method = 'fallback-luminance';
       quality = 'medium';
       confidence = 0.5;
-    } else if (
-      foregroundMask.foreground_percentage < 5 ||
-      foregroundMask.foreground_percentage > 95
-    ) {
-      console.log('   ⚠ Extreme foreground percentage, segmentation may be unreliable');
-      quality = 'low';
-      confidence = 0.6;
+    } else {
+      const fgPct = foregroundMask.foreground_percentage;
+
+      // IMPROVED: Better quality classification
+      if (fgPct >= 5 && fgPct <= 70) {
+        // Ideal range for most photos
+        quality = 'high';
+        confidence = 0.9;
+      } else if (fgPct >= 1 && fgPct < 5) {
+        // Small but valid foreground (architectural details, distant objects)
+        quality = 'medium';
+        confidence = 0.75;
+        console.log('   ℹ Small foreground detected - may be architectural detail');
+      } else if (fgPct > 70 && fgPct <= 90) {
+        // Large foreground (close-ups, portraits)
+        quality = 'medium';
+        confidence = 0.8;
+      } else {
+        // Edge cases
+        quality = 'low';
+        confidence = 0.6;
+        console.log('   ⚠ Unusual foreground percentage, segmentation may be unreliable');
+      }
     }
   } catch (error) {
     console.log(
@@ -226,6 +242,234 @@ async function buildExtractedColor(
   };
 
   return color;
+}
+
+// IMPROVED: Multi-pass deduplication with final cleanup
+function deduplicateSimilarColors(
+  colors: PixelWithWeight[],
+  minDistance: number = 0.4 // Increased from 0.35
+): PixelWithWeight[] {
+  if (colors.length === 0) return [];
+
+  const unique: PixelWithWeight[] = [colors[0]];
+
+  for (let i = 1; i < colors.length; i++) {
+    const color = colors[i];
+    const oklab = rgbToOklab(color.r, color.g, color.b);
+    const hsl = rgbToHsl(color.r, color.g, color.b);
+
+    let isTooSimilar = false;
+    let closestIndex = -1;
+    let minDist = Infinity;
+
+    for (let j = 0; j < unique.length; j++) {
+      const existingOklab = rgbToOklab(unique[j].r, unique[j].g, unique[j].b);
+      const existingHsl = rgbToHsl(unique[j].r, unique[j].g, unique[j].b);
+
+      // Calculate perceptual distance
+      const dl = oklab.l - existingOklab.l;
+      const da = oklab.a - existingOklab.a;
+      const db = oklab.b - existingOklab.b;
+
+      const perceptualDist = Math.sqrt(dl * dl * 1.5 + da * da * 6 + db * db * 6);
+
+      // HSL checks
+      let hueDiff = Math.abs(hsl.h - existingHsl.h);
+      if (hueDiff > 180) hueDiff = 360 - hueDiff;
+
+      const satDiff = Math.abs(hsl.s - existingHsl.s);
+      const lumDiff = Math.abs(hsl.l - existingHsl.l);
+
+      // Determine effective threshold based on color characteristics
+      const isNeutral = hsl.s < 20 || existingHsl.s < 20;
+      const isVeryNeutral = hsl.s < 10 || existingHsl.s < 10;
+
+      let effectiveThreshold = minDistance;
+
+      if (isVeryNeutral) {
+        // Very neutral: strict lightness requirement
+        if (lumDiff < 18) {
+          // Increased from 15
+          isTooSimilar = true;
+          closestIndex = j;
+          break;
+        }
+        effectiveThreshold = minDistance * 0.7;
+      } else if (isNeutral) {
+        // Somewhat neutral: check both
+        if (lumDiff < 12 && satDiff < 18) {
+          // Stricter
+          isTooSimilar = true;
+          closestIndex = j;
+          break;
+        }
+        effectiveThreshold = minDistance * 0.85;
+      } else {
+        // Saturated: strict hue separation
+        if (hueDiff < 28 && satDiff < 22 && lumDiff < 18) {
+          // Stricter
+          isTooSimilar = true;
+          closestIndex = j;
+          break;
+        }
+      }
+
+      if (perceptualDist < minDist) {
+        minDist = perceptualDist;
+        closestIndex = j;
+      }
+
+      if (perceptualDist < effectiveThreshold) {
+        isTooSimilar = true;
+        break;
+      }
+    }
+
+    if (!isTooSimilar) {
+      unique.push(color);
+    } else if (closestIndex >= 0) {
+      unique[closestIndex].weight += color.weight;
+    }
+  }
+
+  return unique.sort((a, b) => b.weight - a.weight);
+}
+
+// NEW: Final cleanup pass to catch any stragglers
+function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
+  if (colors.length <= 1) return colors;
+
+  const cleaned: PixelWithWeight[] = [colors[0]];
+
+  for (let i = 1; i < colors.length; i++) {
+    const color = colors[i];
+    const oklab = rgbToOklab(color.r, color.g, color.b);
+    const hsl = rgbToHsl(color.r, color.g, color.b);
+
+    let keepColor = true;
+    let mergeIndex = -1;
+
+    for (let j = 0; j < cleaned.length; j++) {
+      const existing = cleaned[j];
+      const existingOklab = rgbToOklab(existing.r, existing.g, existing.b);
+      const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
+
+      // Very strict final check
+      const dl = oklab.l - existingOklab.l;
+      const da = oklab.a - existingOklab.a;
+      const db = oklab.b - existingOklab.b;
+      const dist = Math.sqrt(dl * dl * 1.5 + da * da * 6 + db * db * 6);
+
+      // If distance is less than 30 (extremely similar), merge
+      if (dist < 0.3) {
+        keepColor = false;
+        mergeIndex = j;
+        console.log(
+          `   ⚠ Final cleanup: Merging very similar colors (distance: ${dist.toFixed(2)})`
+        );
+        break;
+      }
+
+      // Also check for near-identical hue/sat/lum
+      let hueDiff = Math.abs(hsl.h - existingHsl.h);
+      if (hueDiff > 180) hueDiff = 360 - hueDiff;
+      const satDiff = Math.abs(hsl.s - existingHsl.s);
+      const lumDiff = Math.abs(hsl.l - existingHsl.l);
+
+      if (hueDiff < 10 && satDiff < 10 && lumDiff < 10) {
+        keepColor = false;
+        mergeIndex = j;
+        console.log(`   ⚠ Final cleanup: Merging near-identical colors (hue/sat/lum)`);
+        break;
+      }
+    }
+
+    if (keepColor) {
+      cleaned.push(color);
+    } else if (mergeIndex >= 0) {
+      // Merge weights
+      cleaned[mergeIndex].weight += color.weight;
+    }
+  }
+
+  return cleaned.sort((a, b) => b.weight - a.weight);
+}
+
+function enforceHueDiversity(
+  colors: PixelWithWeight[],
+  minHueDifference: number = 35 // Increased from 30
+): PixelWithWeight[] {
+  if (colors.length === 0) return [];
+
+  const diverse: PixelWithWeight[] = [colors[0]];
+
+  for (let i = 1; i < colors.length; i++) {
+    const color = colors[i];
+    const hsl = rgbToHsl(color.r, color.g, color.b);
+
+    // Skip very low saturation colors (neutrals) from hue check
+    if (hsl.s < 12) {
+      // But check if we already have a similar neutral
+      let hasSimilarNeutral = false;
+
+      for (const existing of diverse) {
+        const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
+
+        if (existingHsl.s < 12) {
+          // Both are neutrals - check lightness difference
+          const lumDiff = Math.abs(hsl.l - existingHsl.l);
+
+          if (lumDiff < 20) {
+            hasSimilarNeutral = true;
+            break;
+          }
+        }
+      }
+
+      if (!hasSimilarNeutral) {
+        diverse.push(color);
+      }
+      continue;
+    }
+
+    let hueTooSimilar = false;
+
+    for (const existing of diverse) {
+      const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
+
+      // Skip if comparing with a neutral
+      if (existingHsl.s < 12) continue;
+
+      // Calculate hue difference (accounting for circular nature)
+      let hueDiff = Math.abs(hsl.h - existingHsl.h);
+      if (hueDiff > 180) hueDiff = 360 - hueDiff;
+
+      // Check saturation and lightness differences too
+      const satDiff = Math.abs(hsl.s - existingHsl.s);
+      const lumDiff = Math.abs(hsl.l - existingHsl.l);
+
+      // IMPROVED: More nuanced similarity detection
+      // Colors are too similar if:
+      // - Very close hue AND similar saturation
+      // - OR identical hue family with minimal sat/lum variation
+      if (hueDiff < minHueDifference && satDiff < 25) {
+        hueTooSimilar = true;
+        break;
+      }
+
+      // Even stricter for nearly identical hues
+      if (hueDiff < 15 && satDiff < 30 && lumDiff < 25) {
+        hueTooSimilar = true;
+        break;
+      }
+    }
+
+    if (!hueTooSimilar) {
+      diverse.push(color);
+    }
+  }
+
+  return diverse;
 }
 
 export async function extractColorsFromImage(
@@ -304,121 +548,82 @@ export async function extractColorsFromImage(
   const fgColorCount = Math.max(1, Math.round(numColors * fgRatio));
   const bgColorCount = Math.max(1, numColors - fgColorCount);
 
-  // Apply improved saturation boosting
   const biasedFgPixels = applySaturationBiasToPixels(fgPixels);
   const biasedBgPixels = applySaturationBiasToPixels(bgPixels);
 
-  // POST-CLUSTERING DEDUPLICATION
-  function deduplicateSimilarColors(
-    colors: PixelWithWeight[],
-    minDistance: number = 0.25
-  ): PixelWithWeight[] {
-    if (colors.length === 0) return [];
-
-    const unique: PixelWithWeight[] = [colors[0]];
-
-    for (let i = 1; i < colors.length; i++) {
-      const color = colors[i];
-      const oklab = rgbToOklab(color.r, color.g, color.b);
-
-      let isTooSimilar = false;
-      let closestIndex = -1;
-      let minDist = Infinity;
-
-      for (let j = 0; j < unique.length; j++) {
-        const existingOklab = rgbToOklab(unique[j].r, unique[j].g, unique[j].b);
-        const dl = oklab.l - existingOklab.l;
-        const da = oklab.a - existingOklab.a;
-        const db = oklab.b - existingOklab.b;
-
-        // Increase hue/chroma weighting even more
-        const dist = Math.sqrt(dl * dl * 1.5 + da * da * 5 + db * db * 5);
-
-        if (dist < minDist) {
-          minDist = dist;
-          closestIndex = j;
-        }
-
-        if (dist < minDistance) {
-          isTooSimilar = true;
-          break;
-        }
-      }
-
-      if (!isTooSimilar) {
-        unique.push(color);
-      } else if (closestIndex >= 0) {
-        unique[closestIndex].weight += color.weight;
-      }
-    }
-
-    return unique.sort((a, b) => b.weight - a.weight);
-  }
-
-  function enforceHueDiversity(
-    colors: PixelWithWeight[],
-    minHueDifference: number = 30
-  ): PixelWithWeight[] {
-    if (colors.length === 0) return [];
-
-    const diverse: PixelWithWeight[] = [colors[0]];
-
-    for (let i = 1; i < colors.length; i++) {
-      const color = colors[i];
-      const hsl = rgbToHsl(color.r, color.g, color.b);
-
-      // Skip very low saturation colors (neutrals) from hue check
-      if (hsl.s < 15) {
-        diverse.push(color);
-        continue;
-      }
-
-      let hueTooSimilar = false;
-
-      for (const existing of diverse) {
-        const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
-
-        // Skip if comparing with a neutral
-        if (existingHsl.s < 15) continue;
-
-        // Calculate hue difference (accounting for circular nature)
-        let hueDiff = Math.abs(hsl.h - existingHsl.h);
-        if (hueDiff > 180) hueDiff = 360 - hueDiff;
-
-        // Also check if saturations are similar
-        const satDiff = Math.abs(hsl.s - existingHsl.s);
-
-        // Too similar if within hue range AND similar saturation
-        if (hueDiff < minHueDifference && satDiff < 20) {
-          hueTooSimilar = true;
-          break;
-        }
-      }
-
-      if (!hueTooSimilar) {
-        diverse.push(color);
-      }
-    }
-
-    return diverse;
-  }
-
+  // Generate many candidates (4x requested)
   const rawFgColors =
-    biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount * 3) : [];
+    biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount * 4) : [];
   const rawBgColors =
-    biasedBgPixels.length > 0 ? kMeansClusteringOklab(biasedBgPixels, bgColorCount * 3) : [];
+    biasedBgPixels.length > 0 ? kMeansClusteringOklab(biasedBgPixels, bgColorCount * 4) : [];
 
-  const dominantFgColors = enforceHueDiversity(deduplicateSimilarColors(rawFgColors)).slice(
-    0,
-    fgColorCount
-  );
-  const dominantBgColors = enforceHueDiversity(deduplicateSimilarColors(rawBgColors)).slice(
-    0,
-    bgColorCount
-  );
+  console.log(`   → Generated ${rawFgColors.length} FG + ${rawBgColors.length} BG candidates`);
+
+  // Pass 1: Initial deduplication (more lenient)
+  const dedupedFg = deduplicateSimilarColors(rawFgColors, 0.35);
+  const dedupedBg = deduplicateSimilarColors(rawBgColors, 0.35);
+
+  console.log(`   → After initial dedup: ${dedupedFg.length} FG + ${dedupedBg.length} BG`);
+
+  // Pass 2: Hue diversity enforcement
+  const diverseFg = enforceHueDiversity(dedupedFg, 35);
+  const diverseBg = enforceHueDiversity(dedupedBg, 35);
+
+  console.log(`   → After hue diversity: ${diverseFg.length} FG + ${diverseBg.length} BG`);
+
+  // Pass 3: Slice to requested count
+  const slicedFg = diverseFg.slice(0, fgColorCount);
+  const slicedBg = diverseBg.slice(0, bgColorCount);
+
+  // Pass 4: FINAL CLEANUP - catch any stragglers
+  const dominantFgColors = finalCleanup(slicedFg);
+  const dominantBgColors = finalCleanup(slicedBg);
 
   console.log(
-    `   ✓ After deduplication: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG colors`
+    `   ✓ After final cleanup: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG colors`
+  );
+
+  // If we lost too many colors in cleanup, we might need to grab more from the pool
+  if (dominantFgColors.length < Math.min(2, fgColorCount)) {
+    console.log('   → Insufficient FG colors after cleanup, adding from pool');
+    const needed = Math.min(2, fgColorCount) - dominantFgColors.length;
+    const additional = diverseFg
+      .slice(fgColorCount, fgColorCount + needed + 2)
+      .filter((candidate) => {
+        // Only add if it's truly different from what we have
+        return !dominantFgColors.some((existing) => {
+          const oklab1 = rgbToOklab(candidate.r, candidate.g, candidate.b);
+          const oklab2 = rgbToOklab(existing.r, existing.g, existing.b);
+          const dl = oklab1.l - oklab2.l;
+          const da = oklab1.a - oklab2.a;
+          const db = oklab1.b - oklab2.b;
+          return Math.sqrt(dl * dl + da * da * 6 + db * db * 6) < 0.4;
+        });
+      });
+    dominantFgColors.push(...additional.slice(0, needed));
+  }
+
+  // Same for background
+  if (dominantBgColors.length < Math.min(3, bgColorCount)) {
+    console.log('   → Insufficient BG colors after cleanup, adding from pool');
+    const needed = Math.min(3, bgColorCount) - dominantBgColors.length;
+    const additional = diverseBg
+      .slice(bgColorCount, bgColorCount + needed + 2)
+      .filter((candidate) => {
+        return !dominantBgColors.some((existing) => {
+          const oklab1 = rgbToOklab(candidate.r, candidate.g, candidate.b);
+          const oklab2 = rgbToOklab(existing.r, existing.g, existing.b);
+          const dl = oklab1.l - oklab2.l;
+          const da = oklab1.a - oklab2.a;
+          const db = oklab1.b - oklab2.b;
+          return Math.sqrt(dl * dl + da * da * 6 + db * db * 6) < 0.4;
+        });
+      });
+    dominantBgColors.push(...additional.slice(0, needed));
+  }
+
+  console.log(
+    `   ✓ Final palette: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG colors`
   );
 
   // ============================================
