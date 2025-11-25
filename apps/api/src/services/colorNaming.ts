@@ -305,45 +305,97 @@ function getIntensityDescriptor(
  */
 class PaletteNameTracker {
   private usedBaseNames = new Set<string>();
-  private usedDescriptors = new Set<string>();
+  private usedFullNames = new Set<string>();
   private descriptorCount: Record<string, number> = {};
+  private hueFamilyCount: Record<string, number> = {};
 
-  pickName(map: PaletteToneMap, tone: ToneBucket, seed: number): string {
+  pickName(map: PaletteToneMap, tone: ToneBucket, seed: number, hueFamily: string): string {
     const options = map[tone] ?? map.medium;
     if (!options.length) return map.medium[0] ?? 'Color';
 
+    // Track hue family usage
+    const familyCount = this.hueFamilyCount[hueFamily] || 0;
+    this.hueFamilyCount[hueFamily] = familyCount + 1;
+
+    // If we've used this hue family multiple times, try harder to find unique names
+    const startOffset = familyCount > 1 ? familyCount : 0;
+
     // Try to find an unused name
-    for (let offset = 0; offset < options.length; offset++) {
+    for (let offset = startOffset; offset < options.length + startOffset; offset++) {
       const index = (Math.abs(seed) + offset) % options.length;
       const candidate = options[index];
+      const candidateLower = candidate.toLowerCase();
 
-      if (!this.usedBaseNames.has(candidate.toLowerCase())) {
-        this.usedBaseNames.add(candidate.toLowerCase());
+      // Check if this exact name or a very similar variant is used
+      let isTooSimilar = false;
+      for (const used of this.usedBaseNames) {
+        // Check for identical or substring matches
+        if (
+          used === candidateLower ||
+          used.includes(candidateLower) ||
+          candidateLower.includes(used)
+        ) {
+          isTooSimilar = true;
+          break;
+        }
+
+        // Check for similar color family names (e.g., "Scarlet" vs "Vermilion")
+        const words1 = used.split(/\s+/);
+        const words2 = candidateLower.split(/\s+/);
+        const commonWords = words1.filter((w) => words2.includes(w));
+        if (commonWords.length > 0 && words1.length <= 2) {
+          isTooSimilar = true;
+          break;
+        }
+      }
+
+      if (!isTooSimilar) {
+        this.usedBaseNames.add(candidateLower);
         return candidate;
       }
     }
 
-    // All names used - fall back to first option with a number
+    // All names used - try with descriptors
     const base = options[Math.abs(seed) % options.length];
     const count = (this.descriptorCount[base] || 0) + 1;
     this.descriptorCount[base] = count;
+
+    // Generate a unique variant
+    const suffixes = ['Dark', 'Light', 'Deep', 'Soft', 'Muted', 'Bright', 'Rich'];
+    for (const suffix of suffixes) {
+      const variant = `${suffix} ${base}`;
+      if (!this.usedFullNames.has(variant.toLowerCase())) {
+        this.usedFullNames.add(variant.toLowerCase());
+        return variant;
+      }
+    }
+
+    // Last resort: numeric suffix
     return `${base} ${count + 1}`;
   }
 
-  pickDescriptor(descriptor: string | null): string | null {
+  pickDescriptor(descriptor: string | null, baseName: string): string | null {
     if (!descriptor) return null;
 
+    // Check if base name already has similar descriptors
+    const lowerBase = baseName.toLowerCase();
+    const lowerDesc = descriptor.toLowerCase();
+
+    // Skip if base already contains the descriptor
+    if (lowerBase.includes(lowerDesc)) return null;
+
     // Limit descriptor repetition
-    const count = this.usedDescriptors.has(descriptor)
-      ? (this.descriptorCount[descriptor] || 0) + 1
-      : 0;
+    const count = this.descriptorCount[descriptor] || 0;
 
-    // If a descriptor is used more than twice, skip it
-    if (count >= 2) return null;
+    // If descriptor is used more than once, skip it
+    if (count >= 1) return null;
 
-    this.usedDescriptors.add(descriptor);
-    this.descriptorCount[descriptor] = count;
+    this.descriptorCount[descriptor] = count + 1;
     return descriptor;
+  }
+
+  markUsed(name: string): void {
+    this.usedFullNames.add(name.toLowerCase());
   }
 }
 
@@ -436,17 +488,23 @@ export function generateColorName(rgb: RGBValues): string {
   const seed = Math.round(hsl.h * 17 + hsl.s * 13 + hsl.l * 11);
 
   if (isNeutralColor(hsl)) {
-    return paletteTracker.pickName(NEUTRAL_NAMES, tone, seed);
+    const name = paletteTracker.pickName(NEUTRAL_NAMES, tone, seed, 'neutral');
+    paletteTracker.markUsed(name);
+    return name;
   }
 
   if (isEarthyTone(hsl)) {
-    return paletteTracker.pickName(EARTH_TONES, tone, seed);
+    const name = paletteTracker.pickName(EARTH_TONES, tone, seed, 'earth');
+    paletteTracker.markUsed(name);
+    return name;
   }
 
   const palette = getHuePalette(hsl.h);
-  const base = paletteTracker.pickName(palette.names, tone, seed);
+  const base = paletteTracker.pickName(palette.names, tone, seed, palette.family.toLowerCase());
   const rawDescriptor = getIntensityDescriptor(hsl.s, hsl.l, tone);
-  const descriptor = paletteTracker.pickDescriptor(rawDescriptor);
+  const descriptor = paletteTracker.pickDescriptor(rawDescriptor, base);
 
-  return finalizeName(base, descriptor);
+  const finalName = finalizeName(base, descriptor);
+  paletteTracker.markUsed(finalName);
+  return finalName;
 }

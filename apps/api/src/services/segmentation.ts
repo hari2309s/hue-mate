@@ -249,18 +249,10 @@ export async function segmentForegroundBackground(
     // IMPROVED: More flexible thresholds
     // - Allow very small foreground (architectural details, distant objects)
     // - Only reject if literally no foreground or completely dominant
-    if (foreground_percentage < 0.1) {
+    if (foreground_percentage > 95 && foreground_percentage <= 99.5) {
       console.log(
-        `   ⚠ Foreground too small (${foreground_percentage.toFixed(2)}%), ignoring mask`
+        `   ℹ Large foreground detected (${foreground_percentage.toFixed(1)}%) - may be close-up or portrait`
       );
-      return null;
-    }
-
-    if (foreground_percentage > 98) {
-      console.log(
-        `   ⚠ Foreground too large (${foreground_percentage.toFixed(1)}%), likely segmentation error`
-      );
-      return null;
     }
 
     const finalMaskBuffer = await sharp(Buffer.from(maskArray), {

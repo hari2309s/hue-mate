@@ -245,9 +245,10 @@ async function buildExtractedColor(
 }
 
 // IMPROVED: Multi-pass deduplication with final cleanup
+// IMPROVED: Multi-pass deduplication with stricter thresholds
 function deduplicateSimilarColors(
   colors: PixelWithWeight[],
-  minDistance: number = 0.4 // Increased from 0.35
+  minDistance: number = 0.5 // Increased from 0.4
 ): PixelWithWeight[] {
   if (colors.length === 0) return [];
 
@@ -266,14 +267,14 @@ function deduplicateSimilarColors(
       const existingOklab = rgbToOklab(unique[j].r, unique[j].g, unique[j].b);
       const existingHsl = rgbToHsl(unique[j].r, unique[j].g, unique[j].b);
 
-      // Calculate perceptual distance
+      // Calculate perceptual distance with higher chroma weight
       const dl = oklab.l - existingOklab.l;
       const da = oklab.a - existingOklab.a;
       const db = oklab.b - existingOklab.b;
 
-      const perceptualDist = Math.sqrt(dl * dl * 1.5 + da * da * 6 + db * db * 6);
+      const perceptualDist = Math.sqrt(dl * dl * 2 + da * da * 8 + db * db * 8);
 
-      // HSL checks
+      // HSL checks with stricter thresholds
       let hueDiff = Math.abs(hsl.h - existingHsl.h);
       if (hueDiff > 180) hueDiff = 360 - hueDiff;
 
@@ -288,8 +289,7 @@ function deduplicateSimilarColors(
 
       if (isVeryNeutral) {
         // Very neutral: strict lightness requirement
-        if (lumDiff < 18) {
-          // Increased from 15
+        if (lumDiff < 22) {
           isTooSimilar = true;
           closestIndex = j;
           break;
@@ -297,17 +297,15 @@ function deduplicateSimilarColors(
         effectiveThreshold = minDistance * 0.7;
       } else if (isNeutral) {
         // Somewhat neutral: check both
-        if (lumDiff < 12 && satDiff < 18) {
-          // Stricter
+        if (lumDiff < 15 && satDiff < 20) {
           isTooSimilar = true;
           closestIndex = j;
           break;
         }
         effectiveThreshold = minDistance * 0.85;
       } else {
-        // Saturated: strict hue separation
-        if (hueDiff < 28 && satDiff < 22 && lumDiff < 18) {
-          // Stricter
+        // Saturated: strict hue separation with higher thresholds
+        if (hueDiff < 32 && satDiff < 25 && lumDiff < 20) {
           isTooSimilar = true;
           closestIndex = j;
           break;
@@ -335,7 +333,7 @@ function deduplicateSimilarColors(
   return unique.sort((a, b) => b.weight - a.weight);
 }
 
-// NEW: Final cleanup pass to catch any stragglers
+// IMPROVED: Final cleanup pass with stricter thresholds
 function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
   if (colors.length <= 1) return colors;
 
@@ -354,14 +352,14 @@ function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
       const existingOklab = rgbToOklab(existing.r, existing.g, existing.b);
       const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
 
-      // Very strict final check
+      // Stricter final check
       const dl = oklab.l - existingOklab.l;
       const da = oklab.a - existingOklab.a;
       const db = oklab.b - existingOklab.b;
-      const dist = Math.sqrt(dl * dl * 1.5 + da * da * 6 + db * db * 6);
+      const dist = Math.sqrt(dl * dl * 2 + da * da * 8 + db * db * 8);
 
-      // If distance is less than 30 (extremely similar), merge
-      if (dist < 0.3) {
+      // If distance is less than 0.35 (very similar), merge
+      if (dist < 0.35) {
         keepColor = false;
         mergeIndex = j;
         console.log(
@@ -376,7 +374,8 @@ function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
       const satDiff = Math.abs(hsl.s - existingHsl.s);
       const lumDiff = Math.abs(hsl.l - existingHsl.l);
 
-      if (hueDiff < 10 && satDiff < 10 && lumDiff < 10) {
+      // Stricter thresholds
+      if (hueDiff < 12 && satDiff < 12 && lumDiff < 12) {
         keepColor = false;
         mergeIndex = j;
         console.log(`   ⚠ Final cleanup: Merging near-identical colors (hue/sat/lum)`);
@@ -397,7 +396,7 @@ function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
 
 function enforceHueDiversity(
   colors: PixelWithWeight[],
-  minHueDifference: number = 35 // Increased from 30
+  minHueDifference: number = 40 // Increased from 35
 ): PixelWithWeight[] {
   if (colors.length === 0) return [];
 
@@ -408,18 +407,18 @@ function enforceHueDiversity(
     const hsl = rgbToHsl(color.r, color.g, color.b);
 
     // Skip very low saturation colors (neutrals) from hue check
-    if (hsl.s < 12) {
-      // But check if we already have a similar neutral
+    if (hsl.s < 15) {
+      // Check if we already have a similar neutral
       let hasSimilarNeutral = false;
 
       for (const existing of diverse) {
         const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
 
-        if (existingHsl.s < 12) {
+        if (existingHsl.s < 15) {
           // Both are neutrals - check lightness difference
           const lumDiff = Math.abs(hsl.l - existingHsl.l);
 
-          if (lumDiff < 20) {
+          if (lumDiff < 25) {
             hasSimilarNeutral = true;
             break;
           }
@@ -438,7 +437,7 @@ function enforceHueDiversity(
       const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
 
       // Skip if comparing with a neutral
-      if (existingHsl.s < 12) continue;
+      if (existingHsl.s < 15) continue;
 
       // Calculate hue difference (accounting for circular nature)
       let hueDiff = Math.abs(hsl.h - existingHsl.h);
@@ -448,17 +447,22 @@ function enforceHueDiversity(
       const satDiff = Math.abs(hsl.s - existingHsl.s);
       const lumDiff = Math.abs(hsl.l - existingHsl.l);
 
-      // IMPROVED: More nuanced similarity detection
+      // STRICTER: More nuanced similarity detection
       // Colors are too similar if:
-      // - Very close hue AND similar saturation
-      // - OR identical hue family with minimal sat/lum variation
-      if (hueDiff < minHueDifference && satDiff < 25) {
+      // - Very close hue AND similar saturation (stricter)
+      if (hueDiff < minHueDifference && satDiff < 20) {
         hueTooSimilar = true;
         break;
       }
 
       // Even stricter for nearly identical hues
-      if (hueDiff < 15 && satDiff < 30 && lumDiff < 25) {
+      if (hueDiff < 18 && satDiff < 25 && lumDiff < 22) {
+        hueTooSimilar = true;
+        break;
+      }
+
+      // NEW: Reject colors in same hue family with minimal variation
+      if (hueDiff < 25 && satDiff < 15) {
         hueTooSimilar = true;
         break;
       }
