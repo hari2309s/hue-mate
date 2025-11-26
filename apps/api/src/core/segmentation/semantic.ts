@@ -6,7 +6,6 @@ import type { SegmentResult } from '../../types/segmentation';
 export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResult[]> {
   try {
     logger.info('=== SEMANTIC SEGMENTATION START ===');
-    logger.info(`API URL: ${HF_CONFIG.API_URL}/${HF_CONFIG.MODELS.SEGFORMER}`);
     logger.info(`Original image buffer size: ${imageBuffer.length} bytes`);
     logger.info(`HF Token present: ${!!HF_CONFIG.TOKEN}`);
 
