@@ -6,6 +6,7 @@ import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColorPaletteResult, ExtractedColor } from '@hue-und-you/types';
 import ExtractionMetadata from '@/src/components/ExtractionMetadata';
+import ExportButtons from '@/src/components/ExportButtons';
 
 interface ColorPaletteDisplayProps {
   result: ColorPaletteResult;
@@ -174,153 +175,22 @@ const ColorCard = ({ color, index }: ColorCardProps) => {
 };
 
 const ColorPaletteDisplay = ({ result }: ColorPaletteDisplayProps) => {
-  const [showExports, setShowExports] = useState(false);
-  const [copiedExport, setCopiedExport] = useState<string | null>(null);
-
-  const copyExport = async (content: string, label: string) => {
-    await navigator.clipboard.writeText(content);
-    setCopiedExport(label);
-    toast.success(`Copied ${label}`);
-    setTimeout(() => setCopiedExport(null), 2000);
-  };
   return (
     <div className="w-full max-w-5xl mx-auto mt-8 space-y-8">
-      {/* Extraction Metadata */}
-      <ExtractionMetadata metadata={result.metadata} showWarning={true} />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
+        {/* Extraction Metadata */}
+        <ExtractionMetadata metadata={result.metadata} showWarning={true} />
+
+        {/* Export Buttons */}
+        <ExportButtons exports={result.exports} />
+      </div>
 
       {/* Color grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
         {result.palette.map((color, index) => (
           <ColorCard key={color.id} color={color} index={index} />
         ))}
       </div>
-
-      {/* Export section */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="border border-var(--border) rounded-md bg-var(--card) overflow-hidden"
-      >
-        <button
-          onClick={() => setShowExports(!showExports)}
-          className="w-full flex items-center justify-between p-4 hover:bg-var(--muted) transition-colors cursor-pointer"
-        >
-          <span className="font-medium text-var(--foreground)">Export Formats</span>
-          {showExports ? (
-            <ChevronUp className="h-5 w-5 text-var(--muted-foreground)" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-var(--muted-foreground)" />
-          )}
-        </button>
-
-        <AnimatePresence>
-          {showExports && (
-            <motion.div
-              initial={{ height: 0 }}
-              animate={{ height: 'auto' }}
-              exit={{ height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="p-4 pt-0 space-y-4">
-                {/* CSS Variables */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-var(--foreground)">CSS Variables</h4>
-                    <button
-                      onClick={() => copyExport(result.exports.css_variables, 'CSS variables')}
-                      className="text-xs text-soft-orange hover:underline flex items-center gap-1"
-                    >
-                      {copiedExport === 'CSS variables' ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
-                    <code>{result.exports.css_variables}</code>
-                  </pre>
-                </div>
-
-                {/* SCSS Variables */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-var(--foreground)">SCSS Variables</h4>
-                    <button
-                      onClick={() => copyExport(result.exports.scss_variables, 'SCSS variables')}
-                      className="text-xs text-soft-orange hover:underline flex items-center gap-1"
-                    >
-                      {copiedExport === 'SCSS variables' ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
-                    <code>{result.exports.scss_variables}</code>
-                  </pre>
-                </div>
-
-                {/* Tailwind Config */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-var(--foreground)">Tailwind Config</h4>
-                    <button
-                      onClick={() =>
-                        copyExport(
-                          JSON.stringify(result.exports.tailwind_config, null, 2),
-                          'Tailwind config'
-                        )
-                      }
-                      className="text-xs text-soft-orange hover:underline flex items-center gap-1"
-                    >
-                      {copiedExport === 'Tailwind config' ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
-                    <code>{JSON.stringify(result.exports.tailwind_config, null, 2)}</code>
-                  </pre>
-                </div>
-
-                {/* Figma Tokens */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-var(--foreground)">Figma Tokens</h4>
-                    <button
-                      onClick={() =>
-                        copyExport(
-                          JSON.stringify(result.exports.figma_tokens, null, 2),
-                          'Figma tokens'
-                        )
-                      }
-                      className="text-xs text-soft-orange hover:underline flex items-center gap-1"
-                    >
-                      {copiedExport === 'Figma tokens' ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="text-xs bg-var(--muted) p-3 rounded-lg overflow-x-auto max-h-40 text-var(--foreground)">
-                    <code>{JSON.stringify(result.exports.figma_tokens, null, 2)}</code>
-                  </pre>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
     </div>
   );
 };
