@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import './globals.css';
 import { ThemeProvider } from '@/src/components/ThemeProvider';
 import { Toaster } from '@/src/components/Toaster';
@@ -9,7 +10,11 @@ export const metadata: Metadata = {
   description: 'ML-driven perceptual color extractor',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+interface RootLayoutProps {
+  children: ReactNode;
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
