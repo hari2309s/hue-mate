@@ -290,4 +290,4 @@ ISC
 
 ---
 
-**Built for designers who ship.** Hue & You combines cutting-edge ML segmentation, perceptual color science, and export flexibility—from concept to production in seconds.
+**Built for designers who ship.** hue-und-you combines cutting-edge ML segmentation, perceptual color science, and export flexibility—from concept to production in seconds.
