@@ -4,7 +4,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@hue-und-you/ui": ["../../packages/ui/src"],
       "@hue-und-you/db": ["../../packages/db/src"],
       "@hue-und-you/api-schema": ["../../packages/api-schema/src"],
       "@hue-und-you/types": ["../../packages/types/src"]
