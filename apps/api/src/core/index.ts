@@ -1,0 +1,110 @@
+// Segmentation
+export {
+  segmentForegroundBackground,
+  segmentSemantic,
+  extractPixels,
+  splitPixelsByLuminance,
+  classifySegment,
+  FOREGROUND_LABELS,
+  AMBIGUOUS_LABELS,
+} from './segmentation';
+
+// Color processing
+export {
+  rgbToOklab,
+  oklabToOklch,
+  oklchToRgb,
+  rgbToHex,
+  rgbToHsl,
+  rgbToHsb,
+  rgbToCmyk,
+  rgbToLab,
+  labToLch,
+  buildColorFormats,
+  kMeansClusteringOklab,
+  applySaturationBias,
+  deduplicateSimilarColors,
+  finalCleanup,
+  enforceHueDiversity,
+  generateColorName,
+  generateCssVariableName,
+  findNearestPantone,
+  resetPaletteNameTracker,
+  getPaletteTracker,
+  buildAccessibilityInfo,
+  contrastRatio,
+  buildContrastResult,
+  calculateAPCA,
+  generateTints,
+  generateShades,
+  generateTintsAndShades,
+  generateHarmonies,
+} from './color';
+
+// Export formats
+export {
+  generateExports,
+  generateCssVariables,
+  generateScssVariables,
+  generateTailwindConfig,
+  generateFigmaTokens,
+  generateSwiftCode,
+  generateKotlinCode,
+  generateJsonExport,
+} from './export';
+
+// Extraction pipeline
+export { extractColorsFromImage, buildExtractionMetadata } from './color/extraction';
+
+export type {
+  ExtractionOptions,
+  ExtractionHooks,
+  SegmentationResultData,
+} from './color/extraction';
+
+// apps/api/package.json (updated scripts section)
+// {
+//   "name": "@hue-und-you/api",
+//   "version": "1.0.0",
+//   "description": "",
+//   "main": "index.js",
+//   "scripts": {
+//     "dev": "node --import tsx --watch src/index.ts",
+//     "build": "tsc --build && tsc-alias -p tsconfig.json",
+//     "start": "node dist/index.js",
+//     "clean": "tsc --build --clean && rm -rf dist",
+//     "lint": "eslint src --ext .ts",
+//     "type-check": "tsc --noEmit"
+//   },
+//   "keywords": [],
+//   "author": "",
+//   "license": "ISC",
+//   "packageManager": "pnpm@10.22.0",
+//   "dependencies": {
+//     "@hue-und-you/api-schema": "workspace:*",
+//     "@hue-und-you/db": "workspace:*",
+//     "@hue-und-you/types": "workspace:*",
+//     "@trpc/server": "^11.7.1",
+//     "color-namer": "^1.4.0",
+//     "cors": "^2.8.5",
+//     "dotenv": "^17.2.3",
+//     "drizzle-orm": "^0.44.7",
+//     "express": "^5.1.0",
+//     "nearest-pantone": "^1.0.1",
+//     "pg": "^8.16.3",
+//     "sharp": "^0.34.5",
+//     "zod": "^4.1.12"
+//   },
+//   "devDependencies": {
+//     "@types/color-namer": "^1.3.3",
+//     "@types/cors": "^2.8.19",
+//     "@types/express": "^5.0.5",
+//     "@types/node": "^20.19.25",
+//     "drizzle-kit": "^0.31.7",
+//     "eslint": "^9.39.1",
+//     "tsc-alias": "^1.8.16",
+//     "tsx": "^4.20.6",
+//     "typescript": "^5.9.3"
+//   },
+//   "type": "module"
+// }
