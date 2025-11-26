@@ -23,122 +23,271 @@
 
 </div>
 
-ML-driven perceptual color extraction → 11-step OKLCH scales, Tailwind config, Figma variables, and CSS/SCSS custom properties. Built for designers who ship.
+ML-driven perceptual color extraction from images. Extract 11-step OKLCH scales, Tailwind configs, Figma variables, CSS/SCSS custom properties, and more—built for designers who ship.
 
-## Features
-- Foreground/background + semantic segmentation with Hugging Face models and robust luminance fallback
-- Weighted K-means clustering in OKLab with saturation bias for vibrant yet distinct colors
-- Deduplication and hue diversity enforcement to avoid near-duplicate swatches
-- Heuristic color naming with palette-aware uniqueness and Pantone approximation
-- Accessibility info (WCAG contrast on white/black and APCA-like metric) with suggested text color
-- Animated UI and transitions with Framer Motion in the frontend
-- Tints and shades generation and classic harmonies (complementary, analogous, triadic, split)
-- One-click export: CSS variables (11 steps), SCSS variables, Tailwind `extend.colors`, Figma variables
+## ✨ Features
 
-## Monorepo Structure
-- `apps/api` — Express + tRPC service that runs the extraction pipeline
-- `apps/web` — Next.js 16 app (App Router) that uploads an image and visualizes results
-- `packages/api-schema` — Shared tRPC router helpers and Zod schemas
-- `packages/types` — Shared TypeScript types for colors, exports, metadata, statuses
-- `packages/ui` — Reusable UI primitives
-- `packages/db` — Drizzle ORM schema for images/palettes/jobs (not yet wired to API)
-- `packages/config` — Shared config (e.g., Tailwind)
+- **Intelligent Segmentation**: Foreground/background separation using Hugging Face's Mask2Former (COCO panoptic) with semantic SegFormer (ADE) fallback and luminance-based emergency fallback
+- **Perceptual Color Clustering**: Weighted K-means in OKLab color space with aggressive saturation bias to favor vibrant, distinct colors
+- **Quality Assurance**: Automatic deduplication, hue diversity enforcement, and confidence scoring to prevent near-duplicate swatches
+- **Smart Color Naming**: Heuristic palette-aware naming with tone bucketing (dark/medium/light), Pantone approximation, and CSS variable generation
+- **Accessibility First**: WCAG AA/AAA contrast ratios on white/black, APCA-like metrics, and suggested text colors for every extracted color
+- **Rich Exports**: 11-step tints/shades, classic harmonies (complementary, analogous, triadic, split), temperature classification, and one-click export to CSS variables, SCSS, Tailwind, Figma tokens, Swift, Kotlin, and JSON
+- **Animated UI**: Smooth transitions and real-time progress feedback with Framer Motion
+- **Streaming Support**: Real-time partial color results via `/stream` endpoint during processing
+- **Type-Safe Pipeline**: End-to-end TypeScript with Zod validation and shared types across monorepo
 
-## Requirements
-- Node.js 18+ (recommended 20+)
-- `pnpm` (corepack enabled) and typical native deps for `sharp`
-
-## Setup
-1. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-2. Copy environment template and set values:
-   ```bash
-   cp .env.example .env
-   ```
-   - `HUGGINGFACE_API_KEY` is required for segmentation; the pipeline falls back to luminance if unavailable
-   - `NEXT_PUBLIC_API_URL` should point to the API (default `http://localhost:3001`)
-
-## Development
-- Start everything via Turbo:
-  ```bash
-  pnpm dev
-  ```
-- Or run targets individually:
-  ```bash
-  pnpm --filter @hue-und-you/api dev    # API on :3001
-  pnpm --filter @hue-und-you/web dev    # Web on :3000
-  ```
-
-Common tasks:
-```bash
-pnpm build        # build all
-pnpm lint         # ESLint across packages/apps
-pnpm type-check   # tsc in each workspace
-pnpm format       # Prettier write
+## 📦 Monorepo Structure
+```
+hue-und-you/
+├── apps/
+│   ├── api/              # Express + tRPC color extraction service
+│   └── web/              # Next.js 16 frontend with real-time UI
+├── packages/
+│   ├── api-schema/       # Shared tRPC router & Zod schemas
+│   ├── types/            # Centralized TypeScript types
+│   ├── ui/               # Reusable React UI primitives
+│   ├── db/               # Drizzle ORM schemas (PostgreSQL)
+│   └── config/           # Shared configs (Tailwind, TypeScript, ESLint)
+└── scripts/              # Build & cleanup utilities
 ```
 
-## Environment
-See `.env.example` for variables. The API logs an environment check on startup (`apps/api/src/index.ts:132-137`). Default API port is `3001`.
+## 🎯 Key Technologies
 
-## API Overview
-The API exposes both tRPC procedures and a streaming endpoint.
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 16, React 19, Framer Motion, Tailwind CSS v4 |
+| **Backend** | Express 5, tRPC 11, Node.js 18+ |
+| **Color Processing** | OKLab/OKLCH conversion, K-means clustering, saturation bias |
+| **ML Models** | Hugging Face (Mask2Former, SegFormer) with fallbacks |
+| **Image I/O** | Sharp for efficient pixel sampling & mask processing |
+| **Database** | PostgreSQL + Drizzle ORM (schemas prepared, API uses in-memory for now) |
+| **Build & Deploy** | Turbo, tsc, pnpm, Render, Vercel |
 
-- Health check: `GET /health`
-- tRPC (HTTP JSON):
-  - `uploadImage` → returns `imageId` for subsequent processing (`packages/api-schema/src/index.ts:4-8`)
-  - `processImage` → kicks off async extraction (`packages/api-schema/src/index.ts:10-19`)
-  - `getProcessingStatus` → status/progress (`packages/api-schema/src/index.ts:21-23`)
-  - `getResult` → final `ColorPaletteResult`
-- Streaming: `GET /stream/:imageId` with optional `numColors`, `includeBackground`, `generateHarmonies` query params (`apps/api/src/index.ts:145-194`)
+## 🚀 Quick Start
 
-Data flow (`apps/api/src/index.ts:28-124`):
-- Upload → image stored in-memory; job status initialized
-- Process → status updates: segmenting → extracting → complete
-- Result polling via web: `getProcessingStatus` then `getResult`
+### Prerequisites
+- **Node.js** 18+ (recommended 20+)
+- **pnpm** (via corepack: `corepack enable`)
+- Typical build tools for `sharp` native deps (Python, C++ compiler)
 
-## Extraction Pipeline
-Entry point: `apps/api/src/services/colorExtraction.ts:479-738`
+### Installation
 
-- Segmentation (`apps/api/src/services/segmentation.ts:167-276`, `283-386`)
-  - Foreground/background: Mask2Former (COCO panoptic) with label classification
-  - Semantic segmentation: SegFormer (ADE) with detailed debug logs
-  - Fallback luminance split when masks are missing or low-confidence
-- Pixel sampling (`apps/api/src/services/segmentation.ts:392-441`) via `sharp`
-- Clustering (`apps/api/src/services/clustering.ts:87-189`)
-  - Weighted K-means in OKLab; aggressive saturation bias (`apps/api/src/services/clustering.ts:45-81`)
-- Post-processing
-  - Deduplicate and enforce hue diversity (`apps/api/src/services/colorExtraction.ts:247-477`)
-- Naming and metadata
-  - Heuristic naming with palette tracking and optional descriptors (`apps/api/src/services/colorNaming.ts:484-510`)
-  - Pantone approximation (`apps/api/src/services/colorNaming.ts:52-70`)
-  - Accessibility (WCAG + APCA-like) (`apps/api/src/services/accessibility.ts:56-81`)
-  - Tints/shades and harmonies (`apps/api/src/services/colorHarmony.ts:21-140`, `147-175`)
-- Export generation (`apps/api/src/services/exportFormats.ts:244-257`)
-  - CSS variables (11-step scale), SCSS, Tailwind
+1. **Clone & install**:
+```bash
+   git clone <repo-url>
+   cd hue-und-you
+   pnpm install
+```
 
-Types are centralized in `packages/types/src/index.ts` (e.g., `ColorPaletteResult`, `ExportFormats`).
+2. **Set up environment**:
+```bash
+   cp .env.example .env
+```
+   Fill in:
+   - `HUGGINGFACE_API_KEY` — Required for ML segmentation; fallback to luminance if missing
+   - `NEXT_PUBLIC_API_URL` — Frontend API endpoint (default: `http://localhost:3001`)
+   - `DATABASE_URL` — PostgreSQL connection (optional, not yet wired to API)
 
-## Frontend
-Next.js app in `apps/web` renders the full workflow:
-- `useImageUpload` orchestrates upload/process/poll (`apps/web/src/hooks/useImageUpload.tsx:36-203`)
-- `FileUploader` handles drag-drop, preview, progress (`apps/web/src/components/FileUploader.tsx:24-316`)
-- `ImagePreview` displays the uploaded image (`apps/web/src/components/ImagePreview.tsx:11-57`)
-- `ColorPaletteDisplay` shows swatches, formats, tints/shades, exports (`apps/web/src/components/ColorPaletteDisplay.tsx:176-327`)
-- `ExtractionMetadata` summarizes timing, confidence, diversity (`apps/web/src/components/ExtractionMetadata.tsx:57-199`)
+3. **Start development**:
+```bash
+   pnpm dev
+```
+   - Frontend: [http://localhost:3000](http://localhost:3000)
+   - API: [http://localhost:3001](http://localhost:3001)
 
-## Database (optional)
-Drizzle schemas live in `packages/db/src/schema.ts:1-71` for images, palettes, processing jobs, and users. The current API uses in-memory stores and will be adapted to persist these records.
+## 📝 Common Tasks
+```bash
+# Build all packages and apps
+pnpm build
 
-## Deployment
-Render configuration for the API is at `apps/api/render.yaml`. It builds only the API service, sets `PORT=10000`, and expects `HUGGINGFACE_API_KEY`.
-Frontend is deployed on Vercel
+# Type-check across workspace
+pnpm type-check
 
-## Troubleshooting
-- Segmentation returns empty: ensure `HUGGINGFACE_API_KEY` is set; otherwise the luminance fallback is used
-- `sharp` errors: verify local libvips installation and image formats
-- Low diversity or near-duplicates: adjust `numColors` or disable background inclusion when appropriate
+# Lint with ESLint
+pnpm lint
 
-## License
+# Format code with Prettier
+pnpm format
+
+# Clean build artifacts
+pnpm clean
+
+# Run API only
+pnpm --filter @hue-und-you/api dev
+
+# Run web only
+pnpm --filter @hue-und-you/web dev
+```
+
+## 🔌 API Overview
+
+### Health Check
+```
+GET /health
+```
+Simple status endpoint.
+
+### tRPC Procedures (JSON-RPC)
+All endpoints: `POST /trpc/<procedure-name>`
+
+| Procedure | Input | Output | Notes |
+|-----------|-------|--------|-------|
+| `uploadImage` | `{ filename, contentType, base64Data }` | `{ success, imageId, message }` | Stores image in-memory |
+| `processImage` | `{ imageId, options? }` | `{ success, status, message }` | Kicks off async extraction |
+| `getProcessingStatus` | `{ imageId }` | `{ status, progress, message }` | Poll for job status |
+| `getResult` | `{ imageId }` | `ColorPaletteResult \| null` | Final palette when complete |
+
+**Status Values**: `idle` → `uploading` → `processing` → `segmenting` → `extracting` → `complete` (or `error`)
+
+### Streaming Endpoint
+```
+GET /stream/:imageId?numColors=10&includeBackground=true&generateHarmonies=true
+```
+Returns newline-delimited JSON with partial results and final palette. Useful for progressive UI updates.
+
+## 🎨 Color Extraction Pipeline
+
+### Entry Point
+`apps/api/src/services/colorExtraction.ts` (stage-based architecture)
+
+### Stage 1: Segmentation
+- **Foreground/Background**: Mask2Former (COCO panoptic) → label classification
+- **Semantic Segmentation**: SegFormer (ADE) for scene understanding
+- **Fallback**: Luminance-based split if ML models unavailable
+- **Output**: Binary mask + confidence score
+
+### Stage 2: Pixel Extraction
+- Sample up to `MAX_SAMPLES` (5000) pixels from image via Sharp
+- Filter out very dark/bright noise
+- Apply mask to label foreground vs. background
+
+### Stage 3: Clustering
+- **Bias**: Apply saturation boost (1–20x) to favor vibrant colors
+- **K-means++**: Run in OKLab with adaptive k (based on FG/BG ratio)
+- **Deduplication**: Remove near-duplicates (perceptual distance < 0.35)
+- **Hue Diversity**: Enforce min 35° hue separation (adaptive for neutrals)
+- **Cleanup**: Final merge pass to hit target color count
+
+### Stage 4: Color Formatting & Naming
+- Generate all formats: HEX, RGB, OKLCH, HSL, HSB, CMYK, LAB, LCH
+- Intelligent naming with palette-aware tone bucketing
+- Pantone approximation via euclidean RGB distance
+- Accessibility scores (WCAG AA/AAA, APCA-like)
+
+### Stage 5: Harmonies & Exports
+- Generate 11-step tints/shades (OKLab lightness manipulation)
+- Classic color harmonies (complementary, analogous, triadic, split)
+- Export to CSS variables, SCSS, Tailwind config, Figma tokens, Swift, Kotlin, JSON
+
+## 🎯 Frontend Workflow
+
+### Components
+- **FileUploader** (`apps/web/src/components/FileUploader.tsx`): Drag-drop, validation, progress bar
+- **ImagePreview** (`apps/web/src/components/ImagePreview.tsx`): Live image display
+- **ColorPaletteDisplay** (`apps/web/src/components/ColorPaletteDisplay.tsx`): Swatches, copy buttons, export panels
+- **ExtractionMetadata** (`apps/web/src/components/ExtractionMetadata.tsx`): Processing stats, confidence, warnings
+
+### Hook
+- **useImageUpload** (`apps/web/src/hooks/useImageUpload.tsx`): Orchestrates upload → process → poll → result lifecycle with auto-toast notifications
+
+### Flow
+1. User drags/selects image
+2. Hook converts to base64 and POST `/trpc/uploadImage`
+3. Receives `imageId` and immediately calls `/trpc/processImage`
+4. Polls `/trpc/getProcessingStatus` every 1s
+5. On completion, fetches `/trpc/getResult`
+6. Results render in palette grid with export options
+
+## 🗄️ Database (Optional)
+
+Drizzle schemas are defined in `packages/db/src/schema.ts`:
+- **images**: Uploaded image metadata & status
+- **palettes**: Extracted color palette records
+- **processingJobs**: Job tracking & progress
+- **users**: User accounts (future)
+
+The current API uses in-memory stores (`ImageStorageService`, `JobQueueService`). To wire PostgreSQL, pass Drizzle client to tRPC routes.
+
+## 🔒 Environment Variables
+```env
+# Required
+HUGGINGFACE_API_KEY=hf_xxxxxxxxxxxx
+
+# API
+PORT=3001
+NODE_ENV=development
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:3001
+
+# Database (optional)
+DATABASE_URL=postgresql://user:password@localhost:5432/hue_und_you
+```
+
+## 📊 Metadata & Confidence
+
+Every result includes `ExtractionMetadata`:
+- **processingTimeMs**: Total time end-to-end
+- **algorithm**: `weighted-kmeans`
+- **colorDiversity**: Entropy-based (0–1)
+- **averageSaturation**: % across palette
+- **dominantTemperature**: `warm` | `cool` | `neutral`
+- **segmentationQuality**: `{ method, confidence, foregroundDetected, usedFallback }`
+- **extractionConfidence**: `{ overall, colorSeparation, namingQuality }` (0–1 each)
+
+## 🚢 Deployment
+
+### API (Render)
+Configuration: `apps/api/render.yaml`
+- Build: `pnpm install && pnpm build --filter=@hue-und-you/api`
+- Start: `cd apps/api && node dist/index.js`
+- Port: `10000`
+- Health check: `/health`
+
+### Frontend (Vercel)
+- Framework: Next.js 16
+- Build: Automatic
+- Environment: Set `NEXT_PUBLIC_API_URL` to production API
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Empty segmentation results | Ensure `HUGGINGFACE_API_KEY` is set; fallback to luminance |
+| `sharp` build errors | Install system deps: `libvips`, `python3`, C++ compiler |
+| Low color diversity | Reduce `numColors` or adjust saturation bias thresholds |
+| Slow uploads | Compress images before sending; max 10 MB by default |
+| ML model timeouts | HF inference may queue; set longer client timeout |
+
+## 📚 Architecture Highlights
+
+### Color Spaces
+- **OKLab**: Perceptually uniform distance metric for clustering
+- **OKLCH**: Cylindrical version (lightness, chroma, hue) for intuitive manipulation
+- **HSL**: For palette naming tone bucketing
+
+### Clustering Strategy
+- K-means++ initialization for better convergence
+- Saturation bias (1–20x boost) to favor vibrant swatches
+- Post-processing deduplication & hue diversity enforcement
+
+### Naming
+- 10 hue families (Crimson, Copper, Solar, Lime, etc.)
+- 3 tone levels (dark, medium, light) per family
+- Palette-aware tracking to avoid duplicates
+- Optional intensity descriptors (Vivid, Muted, Deep, etc.)
+
+### Export Quality
+- 11-step Tailwind scales (50–950)
+- WCAG contrast ratios for accessibility
+- Figma token format for design systems
+- Multi-language support (Swift, Kotlin)
+
+## 📄 License
+
 ISC
+
+---
+
+**Built for designers who ship.** Hue & You combines cutting-edge ML segmentation, perceptual color science, and export flexibility—from concept to production in seconds.
