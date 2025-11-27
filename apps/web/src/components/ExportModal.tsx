@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,6 +29,16 @@ const ANIMATION_CONFIG = {
 
 const COPY_TIMEOUT_MS = 2000;
 
+class ExportError extends Error {
+  constructor(
+    message: string,
+    public readonly operation: 'copy' | 'download'
+  ) {
+    super(message);
+    this.name = 'ExportError';
+  }
+}
+
 function ModalBackdrop({ onClick }: { onClick: () => void }) {
   return (
     <motion.div
@@ -47,7 +57,9 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
   return (
     <header className="flex items-center justify-between p-6 border-b border-(--border)">
       <div>
-        <h2 className="text-xl font-semibold text-(--foreground)">{title}</h2>
+        <h2 id="modal-title" className="text-xl font-semibold text-(--foreground)">
+          {title}
+        </h2>
         <p className="text-sm text-(--muted-foreground) mt-1">
           Copy or download your color palette
         </p>
@@ -91,6 +103,7 @@ function ModalFooter({
         onClick={onDownload}
         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-(--muted) hover:bg-(--muted)/80 text-(--foreground) transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-soft-orange"
         type="button"
+        aria-label="Download file"
       >
         <Download className="h-4 w-4" aria-hidden="true" />
         Download
@@ -101,6 +114,7 @@ function ModalFooter({
         onClick={onCopy}
         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-soft-orange hover:bg-soft-orange/90 text-white transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-soft-orange focus:ring-offset-2"
         type="button"
+        aria-label={copied ? 'Copied to clipboard' : 'Copy to clipboard'}
       >
         {copied ? (
           <>
@@ -126,6 +140,17 @@ export default function ExportModal({
   language = 'css',
 }: ExportModalProps) {
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const fileExtension = useMemo(() => {
     return FILE_EXTENSIONS[language] || 'txt';
@@ -133,13 +158,33 @@ export default function ExportModal({
 
   const handleCopy = useCallback(async () => {
     try {
+      if (!navigator.clipboard) {
+        throw new ExportError('Clipboard API not available', 'copy');
+      }
+
       await navigator.clipboard.writeText(content);
       setCopied(true);
       toast.success(`Copied ${title}`);
-      setTimeout(() => setCopied(false), COPY_TIMEOUT_MS);
-    } catch (error) {
-      toast.error('Failed to copy to clipboard');
-      console.error('Copy error:', error);
+
+      // Clear any existing timeout
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        copyTimeoutRef.current = null;
+      }, COPY_TIMEOUT_MS);
+    } catch (err) {
+      const errorMessage = err instanceof ExportError ? err.message : 'Failed to copy to clipboard';
+      toast.error(errorMessage);
+
+      if (err instanceof Error) {
+        console.error('[ExportModal] Copy error:', {
+          message: err.message,
+          name: err.name,
+        });
+      }
     }
   }, [content, title]);
 
@@ -150,14 +195,25 @@ export default function ExportModal({
       const link = document.createElement('a');
       link.href = url;
       link.download = `colors.${fileExtension}`;
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+
+      // Cleanup blob URL
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+
       toast.success(`Downloaded ${title}`);
-    } catch (error) {
-      toast.error('Failed to download file');
-      console.error('Download error:', error);
+    } catch (err) {
+      const errorMessage = 'Failed to download file';
+      toast.error(errorMessage);
+
+      if (err instanceof Error) {
+        console.error('[ExportModal] Download error:', {
+          message: err.message,
+          name: err.name,
+        });
+      }
     }
   }, [content, title, fileExtension]);
 
@@ -168,6 +224,17 @@ export default function ExportModal({
   const handleModalClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
   }, []);
+
+  // Reset copied state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCopied(false);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
+    }
+  }, [isOpen]);
 
   return (
     <AnimatePresence>

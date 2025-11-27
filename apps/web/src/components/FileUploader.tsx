@@ -172,9 +172,9 @@ const FileUploader = ({
 
   const getStatusIcon = () => {
     if (isUploading || isProcessing)
-      return <Loader2 className="h-5 w-5 animate-spin text-soft-orange" />;
-    if (isComplete) return <CheckCircle className="h-5 w-5 text-green-500" />;
-    if (hasError) return <AlertCircle className="h-5 w-5 text-red-500" />;
+      return <Loader2 className="h-5 w-5 animate-spin text-soft-orange" aria-hidden="true" />;
+    if (isComplete) return <CheckCircle className="h-5 w-5 text-green-500" aria-label="Complete" />;
+    if (hasError) return <AlertCircle className="h-5 w-5 text-red-500" aria-label="Error" />;
     return null;
   };
 
@@ -192,7 +192,10 @@ const FileUploader = ({
           borderColor: isDragging ? 'var(--color-soft-orange)' : 'var(--muted-foreground)',
         }}
         transition={{ duration: 0.2 }}
-        className={`relative flex min-h-80 flex-1 flex-col rounded-md border border-dashed bg-var(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`relative flex min-h-80 flex-1 flex-col rounded-md border border-dashed bg-(--card) p-8 text-center transition-colors ${isBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        role="button"
+        aria-label="Upload image file by clicking or dragging"
+        tabIndex={isBusy ? -1 : 0}
       >
         <input
           type="file"
@@ -200,6 +203,7 @@ const FileUploader = ({
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
           accept={acceptedTypes?.join(',')}
           disabled={isBusy}
+          aria-label={`Upload image file. Max size: ${maxSizeMB}MB. Accepted types: ${acceptedTypes?.join(', ')}`}
         />
 
         <motion.div
@@ -210,7 +214,8 @@ const FileUploader = ({
           <motion.div
             animate={{ scale: isDragging ? 1.2 : 1, rotate: isDragging ? 10 : 0 }}
             transition={{ type: 'spring', stiffness: 300 }}
-            className="rounded-full bg-var(--muted) p-4"
+            className="rounded-full bg-(--muted) p-4"
+            aria-hidden="true"
           >
             {isBusy ? (
               <Loader2 className="h-8 w-8 text-soft-orange animate-spin" />
@@ -220,10 +225,10 @@ const FileUploader = ({
           </motion.div>
 
           <div>
-            <p className="text-lg font-medium text-var(--foreground)">
+            <p className="text-lg font-medium text-(--foreground)">
               {isBusy ? progress.message : isDragging ? 'Drop files here' : 'Drag & drop an image'}
             </p>
-            <p className="mt-1 text-sm text-var(--muted-foreground)">
+            <p className="mt-1 text-sm text-(--muted-foreground)">
               {isBusy
                 ? `${progress.progress}% complete`
                 : `or click to browse • Max ${maxSizeMB}MB`}
@@ -236,7 +241,12 @@ const FileUploader = ({
           <motion.div
             initial={{ opacity: 0, scaleX: 0 }}
             animate={{ opacity: 1, scaleX: 1 }}
-            className="absolute bottom-0 left-0 right-0 h-1 bg-var(--muted) rounded-b-2xl overflow-hidden"
+            className="absolute bottom-0 left-0 right-0 h-1 bg-(--muted) rounded-b-2xl overflow-hidden"
+            role="progressbar"
+            aria-valuenow={progress.progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Upload progress: ${progress.progress}%`}
           >
             <motion.div
               className="h-full bg-soft-orange"
@@ -256,6 +266,8 @@ const FileUploader = ({
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="mt-4 max-h-48 space-y-2 overflow-auto pr-1"
+            role="list"
+            aria-label="Selected files"
           >
             {files.map((file, index) => (
               <motion.div
@@ -263,28 +275,27 @@ const FileUploader = ({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-3 rounded-md bg-var(--card) border border-var(--border) p-3"
+                className="flex items-center gap-3 rounded-md bg-(--card) border border-(--border) p-3"
+                role="listitem"
               >
                 {file.preview ? (
                   <Image
                     src={file.preview}
-                    alt={file.name}
+                    alt={`Preview of ${file.name}`}
                     width={40}
                     height={40}
                     className="h-10 w-10 rounded object-cover"
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded bg-var(--muted)">
-                    <FileIcon className="h-5 w-5 text-var(--muted-foreground)" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded bg-(--muted)">
+                    <FileIcon className="h-5 w-5 text-(--muted-foreground)" aria-hidden="true" />
                   </div>
                 )}
 
                 <div className="flex-1 min-w-0 flex items-center gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-var(--foreground)">
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-var(--muted-foreground)">
+                    <p className="truncate text-sm font-medium text-(--foreground)">{file.name}</p>
+                    <p className="text-xs text-(--muted-foreground)">
                       {formatFileSize(file.size)} • {progress.message}
                     </p>
                   </div>
@@ -298,10 +309,11 @@ const FileUploader = ({
                       whileTap={{ scale: 0.9 }}
                       onClick={() => removeFile(index)}
                       disabled={isBusy}
-                      className="rounded-full p-1.5 hover:bg-var(--muted) transition-colors disabled:opacity-50"
+                      className="rounded-full p-1.5 hover:bg-(--muted) transition-colors disabled:opacity-50"
                       aria-label={`Remove ${file.name}`}
+                      type="button"
                     >
-                      <X className="h-6 w-6 text-var(--muted-foreground) cursor-pointer hover:text-red-500" />
+                      <X className="h-6 w-6 text-(--muted-foreground) cursor-pointer hover:text-red-500" />
                     </motion.button>
                   )}
                 </div>

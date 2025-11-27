@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import { FileCode, FileJson, Palette, Package } from 'lucide-react';
 import type { ExportFormats } from '@hue-und-you/types';
@@ -69,15 +69,11 @@ const INITIAL_MODAL_STATE: ModalState = {
   language: '',
 };
 
-function ExportButton({
-  button,
-  content,
-  onClick,
-}: {
+const ExportButton = memo<{
   button: ExportButton;
   content: string;
   onClick: () => void;
-}) {
+}>(({ button, content, onClick }) => {
   if (!content) return null;
 
   return (
@@ -94,7 +90,8 @@ function ExportButton({
       <span className="text-xs opacity-75">Click to view</span>
     </motion.button>
   );
-}
+});
+ExportButton.displayName = 'ExportButton';
 
 export default function ExportButtons({ exports }: ExportButtonsProps) {
   const [modalState, setModalState] = useState<ModalState>(INITIAL_MODAL_STATE);
@@ -109,8 +106,15 @@ export default function ExportButtons({ exports }: ExportButtonsProps) {
 
   const availableButtons = useMemo(() => {
     return EXPORT_BUTTONS.filter((button) => {
-      const content = button.getContent(exports);
-      return content && content.length > 0;
+      try {
+        const content = button.getContent(exports);
+        return content && content.length > 0;
+      } catch (err) {
+        if (err instanceof Error) {
+          console.error(`[ExportButtons] Error getting content for ${button.title}:`, err.message);
+        }
+        return false;
+      }
     });
   }, [exports]);
 

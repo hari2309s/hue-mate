@@ -55,6 +55,12 @@ const CONFIDENCE_COLORS = {
   LOW: 'text-orange-500',
 } as const;
 
+const TEMPERATURE_EMOJIS = {
+  warm: '🔥',
+  cool: '❄️',
+  neutral: '⚖️',
+} as const;
+
 function getDiversityLabel(diversity: number): string {
   if (diversity >= DIVERSITY_THRESHOLDS.VERY_HIGH) return 'Very High';
   if (diversity >= DIVERSITY_THRESHOLDS.HIGH) return 'High';
@@ -80,19 +86,6 @@ function getConfidenceColor(confidence: number): string {
   if (confidence >= 0.8) return CONFIDENCE_COLORS.HIGH;
   if (confidence >= 0.6) return CONFIDENCE_COLORS.MEDIUM;
   return CONFIDENCE_COLORS.LOW;
-}
-
-function getTemperatureEmoji(temperature: string): string {
-  switch (temperature) {
-    case 'warm':
-      return '🔥';
-    case 'cool':
-      return '❄️';
-    case 'neutral':
-      return '⚖️';
-    default:
-      return '';
-  }
 }
 
 function MetadataRow({ icon, label, value }: MetadataItem) {
@@ -122,7 +115,7 @@ function WarningMessage({
   color: string;
 }) {
   return (
-    <div className={`flex items-start gap-3 text-sm rounded-md ${color} p-3`}>
+    <div className={`flex items-start gap-3 text-sm rounded-md ${color} p-3`} role="alert">
       <div className="shrink-0 mt-0.5">{icon}</div>
       <span>{message}</span>
     </div>
@@ -133,47 +126,62 @@ export default function ExtractionMetadata({
   metadata,
   showWarning = false,
 }: ExtractionMetadataProps) {
-  const processingSeconds = useMemo(
-    () => (metadata.processingTimeMs / 1000).toFixed(2),
-    [metadata.processingTimeMs]
-  );
+  // Combine all derived values into a single useMemo for better performance
+  const derivedValues = useMemo(() => {
+    const processingSeconds = (metadata.processingTimeMs / 1000).toFixed(2);
+    const algorithmLabel =
+      metadata.algorithm === 'weighted-kmeans' ? 'Weighted K-means++' : 'K-means++';
+    const diversityLabel = getDiversityLabel(metadata.colorDiversity);
+    const diversityColor = getDiversityColor(metadata.colorDiversity);
+    const saturationColor = getSaturationColor(metadata.averageSaturation);
+    const confidenceColor = getConfidenceColor(metadata.extractionConfidence.overall);
+    const temperatureEmoji =
+      TEMPERATURE_EMOJIS[metadata.dominantTemperature as keyof typeof TEMPERATURE_EMOJIS] || '';
 
-  const algorithmLabel = useMemo(
-    () => (metadata.algorithm === 'weighted-kmeans' ? 'Weighted K-means++' : 'K-means++'),
-    [metadata.algorithm]
-  );
+    const showLowQualityWarning =
+      showWarning &&
+      (metadata.segmentationQuality.usedFallback ||
+        metadata.averageSaturation < 25 ||
+        metadata.colorDiversity < 0.3 ||
+        metadata.extractionConfidence.overall < 0.7);
 
-  const diversityLabel = useMemo(
-    () => getDiversityLabel(metadata.colorDiversity),
-    [metadata.colorDiversity]
-  );
+    // Pre-compute warning conditions
+    const warnings = {
+      usedFallback: metadata.segmentationQuality.usedFallback,
+      lowSaturationOrDiversity: metadata.averageSaturation < 25 || metadata.colorDiversity < 0.3,
+      lowConfidence: metadata.extractionConfidence.overall < 0.7,
+      lowSaturationOnly: metadata.averageSaturation < 25,
+      lowDiversityOnly: metadata.colorDiversity < 0.3,
+      bothLow: metadata.averageSaturation < 25 && metadata.colorDiversity < 0.3,
+    };
 
-  const diversityColor = useMemo(
-    () => getDiversityColor(metadata.colorDiversity),
-    [metadata.colorDiversity]
-  );
-
-  const saturationColor = useMemo(
-    () => getSaturationColor(metadata.averageSaturation),
-    [metadata.averageSaturation]
-  );
-
-  const confidenceColor = useMemo(
-    () => getConfidenceColor(metadata.extractionConfidence.overall),
-    [metadata.extractionConfidence.overall]
-  );
-
-  const temperatureEmoji = useMemo(
-    () => getTemperatureEmoji(metadata.dominantTemperature),
-    [metadata.dominantTemperature]
-  );
-
-  const showLowQualityWarning =
-    showWarning &&
-    (metadata.segmentationQuality.usedFallback ||
-      metadata.averageSaturation < 25 ||
-      metadata.colorDiversity < 0.3 ||
-      metadata.extractionConfidence.overall < 0.7);
+    return {
+      processingSeconds,
+      algorithmLabel,
+      diversityLabel,
+      diversityColor,
+      saturationColor,
+      confidenceColor,
+      temperatureEmoji,
+      showLowQualityWarning,
+      warnings,
+      qualityBadgeClass: QUALITY_BADGE_CLASSES[metadata.segmentationQuality.confidence],
+      segmentationMethod:
+        metadata.segmentationQuality.method === 'mask2former' ? 'AI Model' : 'Fallback Method',
+      overallConfidencePercent: Math.round(metadata.extractionConfidence.overall * 100),
+      colorSeparationPercent: Math.round(metadata.extractionConfidence.colorSeparation * 100),
+      namingQualityPercent: Math.round(metadata.extractionConfidence.namingQuality * 100),
+    };
+  }, [
+    metadata.processingTimeMs,
+    metadata.algorithm,
+    metadata.colorDiversity,
+    metadata.averageSaturation,
+    metadata.extractionConfidence,
+    metadata.dominantTemperature,
+    metadata.segmentationQuality,
+    showWarning,
+  ]);
 
   return (
     <motion.section
@@ -189,8 +197,8 @@ export default function ExtractionMetadata({
         label="Processing time"
         value={
           <span className="text-(--foreground)">
-            Extracted in <strong>{processingSeconds}s</strong> using{' '}
-            <strong>{algorithmLabel}</strong>
+            Extracted in <strong>{derivedValues.processingSeconds}s</strong> using{' '}
+            <strong>{derivedValues.algorithmLabel}</strong>
           </span>
         }
       />
@@ -203,16 +211,12 @@ export default function ExtractionMetadata({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-(--foreground)">Segmentation:</span>
             <span
-              className={`px-2 py-0.5 rounded text-xs font-medium border ${QUALITY_BADGE_CLASSES[metadata.segmentationQuality.confidence]}`}
+              className={`px-2 py-0.5 rounded text-xs font-medium border ${derivedValues.qualityBadgeClass}`}
             >
               {metadata.segmentationQuality.confidence.toUpperCase()}
             </span>
             <span className="text-(--muted-foreground) text-xs">
-              (
-              {metadata.segmentationQuality.method === 'mask2former'
-                ? 'AI Model'
-                : 'Fallback Method'}
-              )
+              ({derivedValues.segmentationMethod})
             </span>
           </div>
         }
@@ -225,12 +229,12 @@ export default function ExtractionMetadata({
         value={
           <span className="text-(--foreground)">
             Extraction Confidence:{' '}
-            <strong className={confidenceColor}>
-              {Math.round(metadata.extractionConfidence.overall * 100)}%
+            <strong className={derivedValues.confidenceColor}>
+              {derivedValues.overallConfidencePercent}%
             </strong>
             <span className="text-(--muted-foreground) text-xs ml-2">
-              (separation: {Math.round(metadata.extractionConfidence.colorSeparation * 100)}%,
-              naming: {Math.round(metadata.extractionConfidence.namingQuality * 100)}%)
+              (separation: {derivedValues.colorSeparationPercent}%, naming:{' '}
+              {derivedValues.namingQualityPercent}%)
             </span>
           </span>
         }
@@ -242,7 +246,8 @@ export default function ExtractionMetadata({
         label="Color diversity"
         value={
           <span className="text-(--foreground)">
-            Color Diversity: <strong className={diversityColor}>{diversityLabel}</strong>
+            Color Diversity:{' '}
+            <strong className={derivedValues.diversityColor}>{derivedValues.diversityLabel}</strong>
             <span className="text-(--muted-foreground)">
               {' '}
               ({metadata.colorDiversity.toFixed(2)})
@@ -254,7 +259,7 @@ export default function ExtractionMetadata({
       {/* Average Saturation */}
       <MetadataRow
         icon={
-          <div className={`h-5 w-5 ${saturationColor}`}>
+          <div className={`h-5 w-5 ${derivedValues.saturationColor}`}>
             <svg
               className="h-full w-full"
               fill="currentColor"
@@ -269,7 +274,7 @@ export default function ExtractionMetadata({
         value={
           <span className="text-(--foreground)">
             Average Saturation:{' '}
-            <strong className={saturationColor}>{metadata.averageSaturation}%</strong>
+            <strong className={derivedValues.saturationColor}>{metadata.averageSaturation}%</strong>
           </span>
         }
       />
@@ -281,7 +286,7 @@ export default function ExtractionMetadata({
         value={
           <span className="text-(--foreground)">
             Dominant Tone: <strong className="capitalize">{metadata.dominantTemperature}</strong>{' '}
-            {temperatureEmoji}
+            {derivedValues.temperatureEmoji}
           </span>
         }
       />
@@ -293,9 +298,9 @@ export default function ExtractionMetadata({
       </div>
 
       {/* Warnings */}
-      {showLowQualityWarning && (
+      {derivedValues.showLowQualityWarning && (
         <div className="space-y-2 pt-2">
-          {metadata.segmentationQuality.usedFallback && (
+          {derivedValues.warnings.usedFallback && (
             <WarningMessage
               icon={<AlertCircle className="h-5 w-5 text-blue-600" aria-hidden="true" />}
               message="AI segmentation unavailable. Used fallback method for foreground/background separation. Results may be less accurate."
@@ -303,13 +308,13 @@ export default function ExtractionMetadata({
             />
           )}
 
-          {(metadata.averageSaturation < 25 || metadata.colorDiversity < 0.3) && (
+          {derivedValues.warnings.lowSaturationOrDiversity && (
             <WarningMessage
               icon={<AlertCircle className="h-5 w-5 text-yellow-600" aria-hidden="true" />}
               message={
-                metadata.averageSaturation < 25 && metadata.colorDiversity < 0.3
+                derivedValues.warnings.bothLow
                   ? 'Image has low color saturation and diversity. Try images with more vibrant, varied colors.'
-                  : metadata.averageSaturation < 25
+                  : derivedValues.warnings.lowSaturationOnly
                     ? 'Image has low color saturation. Consider images with more vibrant colors.'
                     : 'Color diversity is low. Multiple extracted colors may be similar.'
               }
@@ -317,7 +322,7 @@ export default function ExtractionMetadata({
             />
           )}
 
-          {metadata.extractionConfidence.overall < 0.7 && (
+          {derivedValues.warnings.lowConfidence && (
             <WarningMessage
               icon={<AlertCircle className="h-5 w-5 text-orange-600" aria-hidden="true" />}
               message="Extraction confidence is moderate. Colors may not be as accurately separated or named as expected."

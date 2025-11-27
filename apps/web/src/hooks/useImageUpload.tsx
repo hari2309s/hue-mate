@@ -40,6 +40,16 @@ interface UseImageUploadReturn {
   hasError: boolean;
 }
 
+class UploadError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: string
+  ) {
+    super(message);
+    this.name = 'UploadError';
+  }
+}
+
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -48,7 +58,7 @@ async function fileToBase64(file: File): Promise<string> {
       const base64 = result.split(',')[1];
       resolve(base64);
     };
-    reader.onerror = reject;
+    reader.onerror = () => reject(new UploadError('Failed to read file', 'FILE_READ_ERROR'));
     reader.readAsDataURL(file);
   });
 }
@@ -56,29 +66,35 @@ async function fileToBase64(file: File): Promise<string> {
 async function uploadImageToServer(
   filename: string,
   contentType: string,
-  base64Data: string
+  base64Data: string,
+  signal: AbortSignal
 ): Promise<string> {
   const response = await fetch(`${API_URL}/trpc/uploadImage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filename, contentType, base64Data }),
+    signal,
   });
 
   if (!response.ok) {
-    throw new Error('Upload failed');
+    throw new UploadError('Upload failed', 'UPLOAD_ERROR');
   }
 
   const data = await response.json();
   const imageId = data.result?.data?.imageId;
 
   if (!imageId) {
-    throw new Error('No image ID returned');
+    throw new UploadError('No image ID returned', 'NO_IMAGE_ID');
   }
 
   return imageId;
 }
 
-async function startProcessing(imageId: string, options: UploadOptions): Promise<void> {
+async function startProcessing(
+  imageId: string,
+  options: UploadOptions,
+  signal: AbortSignal
+): Promise<void> {
   const response = await fetch(`${API_URL}/trpc/processImage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -90,24 +106,30 @@ async function startProcessing(imageId: string, options: UploadOptions): Promise
         generateHarmonies: options.generateHarmonies ?? true,
       },
     }),
+    signal,
   });
 
   if (!response.ok) {
-    throw new Error('Processing request failed');
+    throw new UploadError('Processing request failed', 'PROCESSING_ERROR');
   }
 }
 
-async function fetchProcessingStatus(imageId: string) {
+async function fetchProcessingStatus(imageId: string, signal: AbortSignal) {
   const response = await fetch(
-    `${API_URL}/trpc/getProcessingStatus?input=${encodeURIComponent(JSON.stringify({ imageId }))}`
+    `${API_URL}/trpc/getProcessingStatus?input=${encodeURIComponent(JSON.stringify({ imageId }))}`,
+    { signal }
   );
   const data = await response.json();
   return data.result?.data;
 }
 
-async function fetchResult(imageId: string): Promise<ColorPaletteResult | null> {
+async function fetchResult(
+  imageId: string,
+  signal: AbortSignal
+): Promise<ColorPaletteResult | null> {
   const response = await fetch(
-    `${API_URL}/trpc/getResult?input=${encodeURIComponent(JSON.stringify({ imageId }))}`
+    `${API_URL}/trpc/getResult?input=${encodeURIComponent(JSON.stringify({ imageId }))}`,
+    { signal }
   );
   const data = await response.json();
   return data.result?.data ?? null;
@@ -123,18 +145,36 @@ export function useImageUpload(): UseImageUploadReturn {
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const toastIdRef = useRef<string | number | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
-  // Cleanup polling on unmount
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
+      isMountedRef.current = false;
+
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+
+      if (toastIdRef.current) {
+        toast.dismiss(toastIdRef.current);
+        toastIdRef.current = null;
       }
     };
   }, []);
 
   const updateProgress = useCallback(
     (status: UploadStatus, progressVal: number, message?: string, error?: string) => {
+      if (!isMountedRef.current) return;
+
       setProgress({
         status,
         progress: progressVal,
@@ -146,12 +186,14 @@ export function useImageUpload(): UseImageUploadReturn {
   );
 
   const updateToast = useCallback((status: UploadStatus, message: string) => {
-    if (!toastIdRef.current) return;
+    if (!isMountedRef.current || !toastIdRef.current) return;
 
     if (status === 'complete') {
       toast.success('Color extraction complete!', { id: toastIdRef.current });
+      toastIdRef.current = null;
     } else if (status === 'error') {
       toast.error(message, { id: toastIdRef.current });
+      toastIdRef.current = null;
     } else {
       toast.loading(message, { id: toastIdRef.current });
     }
@@ -159,9 +201,17 @@ export function useImageUpload(): UseImageUploadReturn {
 
   const pollStatus = useCallback(
     async (imageId: string) => {
+      if (!isMountedRef.current || abortControllerRef.current?.signal.aborted) {
+        return;
+      }
+
       try {
-        const statusData = await fetchProcessingStatus(imageId);
-        if (!statusData) return;
+        const statusData = await fetchProcessingStatus(
+          imageId,
+          abortControllerRef.current?.signal || new AbortController().signal
+        );
+
+        if (!isMountedRef.current || !statusData) return;
 
         updateProgress(statusData.status, statusData.progress, statusData.message);
         updateToast(statusData.status, statusData.message);
@@ -172,8 +222,12 @@ export function useImageUpload(): UseImageUploadReturn {
             pollingRef.current = null;
           }
 
-          const fetchedResult = await fetchResult(imageId);
-          if (fetchedResult) {
+          const fetchedResult = await fetchResult(
+            imageId,
+            abortControllerRef.current?.signal || new AbortController().signal
+          );
+
+          if (isMountedRef.current && fetchedResult) {
             setResult(fetchedResult);
           }
         } else if (statusData.status === 'error') {
@@ -183,7 +237,13 @@ export function useImageUpload(): UseImageUploadReturn {
           }
         }
       } catch (err) {
-        console.error('Polling error:', err);
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+
+        if (isMountedRef.current) {
+          console.error('[useImageUpload] Polling error:', err);
+        }
       }
     },
     [updateProgress, updateToast]
@@ -191,20 +251,35 @@ export function useImageUpload(): UseImageUploadReturn {
 
   const upload = useCallback(
     async (file: File, options: UploadOptions = {}) => {
-      // Reset state
       setResult(null);
       updateProgress('uploading', UPLOAD_PROGRESS_STEPS.PREPARING, 'Preparing upload...');
 
-      // Show loading toast
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
       toastIdRef.current = toast.loading('Uploading image...');
 
       try {
-        // Convert file to base64
         const base64Data = await fileToBase64(file);
+
+        if (abortControllerRef.current.signal.aborted || !isMountedRef.current) {
+          return;
+        }
+
         updateProgress('uploading', UPLOAD_PROGRESS_STEPS.UPLOADING, 'Uploading to server...');
 
-        // Upload image
-        const imageId = await uploadImageToServer(file.name, file.type, base64Data);
+        const imageId = await uploadImageToServer(
+          file.name,
+          file.type,
+          base64Data,
+          abortControllerRef.current.signal
+        );
+
+        if (abortControllerRef.current.signal.aborted || !isMountedRef.current) {
+          return;
+        }
 
         updateProgress(
           'processing',
@@ -213,15 +288,33 @@ export function useImageUpload(): UseImageUploadReturn {
         );
         toast.loading('Processing image...', { id: toastIdRef.current });
 
-        // Start processing
-        await startProcessing(imageId, options);
+        await startProcessing(imageId, options, abortControllerRef.current.signal);
 
-        // Start polling for status
+        if (abortControllerRef.current.signal.aborted || !isMountedRef.current) {
+          return;
+        }
+
         pollingRef.current = setInterval(() => pollStatus(imageId), POLLING_INTERVAL_MS);
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Upload failed';
-        updateProgress('error', 0, errorMsg, errorMsg);
-        toast.error(errorMsg, { id: toastIdRef.current });
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+
+        const errorMsg =
+          err instanceof UploadError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Upload failed';
+
+        if (isMountedRef.current) {
+          updateProgress('error', 0, errorMsg, errorMsg);
+
+          if (toastIdRef.current) {
+            toast.error(errorMsg, { id: toastIdRef.current });
+            toastIdRef.current = null;
+          }
+        }
 
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
@@ -237,9 +330,19 @@ export function useImageUpload(): UseImageUploadReturn {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    if (toastIdRef.current) {
+      toast.dismiss(toastIdRef.current);
+      toastIdRef.current = null;
+    }
+
     setProgress({ status: 'idle', progress: 0, message: STATUS_MESSAGES.idle });
     setResult(null);
-    toastIdRef.current = null;
   }, []);
 
   return {

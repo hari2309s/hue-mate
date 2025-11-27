@@ -16,6 +16,10 @@ const iconVariants = {
 
 const emptySubscribe = () => () => {};
 
+function isValidTheme(theme: string | undefined): theme is Theme {
+  return themes.includes(theme as Theme);
+}
+
 const ThemeSwitcher = () => {
   const isServer = useSyncExternalStore(
     emptySubscribe,
@@ -23,10 +27,13 @@ const ThemeSwitcher = () => {
     () => true
   );
 
-  const { theme, setTheme } = useTheme();
+  const { theme: rawTheme, setTheme } = useTheme();
+
+  // Type-safe theme with proper fallback
+  const theme: Theme = isValidTheme(rawTheme) ? rawTheme : 'system';
 
   const cycleTheme = () => {
-    const currentIndex = themes.indexOf(theme as Theme);
+    const currentIndex = themes.indexOf(theme);
     const nextIndex = (currentIndex + 1) % themes.length;
     setTheme(themes[nextIndex]);
   };
@@ -35,24 +42,35 @@ const ThemeSwitcher = () => {
     const iconClass = 'h-5 w-5 text-[var(--foreground)]';
 
     if (isServer) {
-      return <div className="h-5 w-5" />;
+      return <div className="h-5 w-5" aria-hidden="true" />;
     }
 
     switch (theme) {
       case 'light':
-        return <Sun className={iconClass} />;
+        return <Sun className={iconClass} aria-label="Light mode" />;
       case 'dark':
-        return <Moon className={iconClass} />;
+        return <Moon className={iconClass} aria-label="Dark mode" />;
       case 'system':
       default:
-        return <Monitor className={iconClass} />;
+        return <Monitor className={iconClass} aria-label="System mode" />;
     }
   };
+
+  const getThemeLabel = (themeValue: Theme): string => {
+    const labels: Record<Theme, string> = {
+      light: 'Light mode',
+      dark: 'Dark mode',
+      system: 'System mode',
+    };
+    return labels[themeValue];
+  };
+
+  const nextTheme = themes[(themes.indexOf(theme) + 1) % themes.length];
 
   return (
     <motion.button
       onClick={cycleTheme}
-      className="fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-md bg-var(--card) shadow-lg border border-dashed border-var(--border) cursor-pointer overflow-hidden"
+      className="fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-md bg-(--card) shadow-lg border border-dashed border-(--border) cursor-pointer overflow-hidden"
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
       initial={{ opacity: 0, y: 20 }}
@@ -60,9 +78,10 @@ const ThemeSwitcher = () => {
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       aria-label={
         isServer
-          ? 'Current theme: system. Click to switch theme.'
-          : `Current theme: ${theme}. Click to switch theme.`
+          ? 'Switch theme. Currently: system mode. Click to change theme.'
+          : `Switch theme. Currently: ${getThemeLabel(theme)}. Click to switch to ${getThemeLabel(nextTheme)}.`
       }
+      type="button"
     >
       <AnimatePresence mode="wait">
         <motion.div
