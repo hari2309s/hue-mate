@@ -27,16 +27,21 @@ export async function extractPixels(
   }
 
   const totalPixels = info.width * info.height;
+
+  // DETERMINISTIC sampling: always use the same rate and pattern
   const sampleRate = Math.max(1, Math.floor(totalPixels / APP_CONFIG.MAX_SAMPLES));
 
-  logger.success(`Sampling every ${sampleRate} pixel(s) from ${totalPixels} total`);
+  logger.success(`Sampling every ${sampleRate} pixel(s) from ${totalPixels} total (deterministic)`);
 
+  // Sample pixels in a consistent pattern (every Nth pixel)
   for (let i = 0; i < data.length; i += sampleRate * info.channels) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
 
     const brightness = (r + g + b) / 3;
+
+    // Apply consistent brightness filter
     if (brightness > 15 && brightness < 240) {
       pixels.push({ r, g, b });
 
@@ -48,6 +53,8 @@ export async function extractPixels(
       }
     }
   }
+
+  logger.success(`Extracted ${pixels.length} pixels (deterministic sampling)`);
 
   return { pixels, isForeground };
 }

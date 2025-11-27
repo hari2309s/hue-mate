@@ -125,6 +125,8 @@ export function generateColorName(rgb: RGBValues): string {
   const tracker = getPaletteTracker();
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
   const tone = getToneBucket(hsl.l, hsl.s);
+
+  // DETERMINISTIC seed: based on color values, not random
   const seed = Math.round(hsl.h * 17 + hsl.s * 13 + hsl.l * 11);
 
   if (isNeutralColor(hsl)) {

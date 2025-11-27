@@ -1,9 +1,46 @@
 import type { PixelData, PixelWithWeight, PixelWithOklab } from '../../../types/segmentation';
 import { rgbToOklab, oklabToOklch, oklchToRgb } from '../conversion';
 
-function kMeansPlusPlus(pixels: PixelWithOklab[], k: number): PixelWithOklab[] {
+// Seeded random number generator (LCG algorithm)
+class SeededRandom {
+  private seed: number;
+
+  constructor(seed: number) {
+    this.seed = seed;
+  }
+
+  next(): number {
+    this.seed = (this.seed * 1664525 + 1013904223) % 4294967296;
+    return this.seed / 4294967296;
+  }
+
+  nextInt(min: number, max: number): number {
+    return Math.floor(this.next() * (max - min)) + min;
+  }
+}
+
+// Generate deterministic seed from pixel data
+function generateSeed(pixels: PixelWithOklab[]): number {
+  let hash = 0;
+  const sampleSize = Math.min(100, pixels.length);
+  const step = Math.floor(pixels.length / sampleSize);
+
+  for (let i = 0; i < pixels.length; i += step) {
+    const p = pixels[i];
+    hash = ((hash << 5) - hash + Math.round(p.r * 255)) | 0;
+    hash = ((hash << 5) - hash + Math.round(p.g * 255)) | 0;
+    hash = ((hash << 5) - hash + Math.round(p.b * 255)) | 0;
+  }
+
+  return Math.abs(hash);
+}
+
+function kMeansPlusPlus(pixels: PixelWithOklab[], k: number, rng: SeededRandom): PixelWithOklab[] {
   const centroids: PixelWithOklab[] = [];
-  centroids.push({ ...pixels[Math.floor(Math.random() * pixels.length)] });
+
+  // First centroid: pick deterministically from middle of array
+  const firstIndex = Math.floor(pixels.length / 2);
+  centroids.push({ ...pixels[firstIndex] });
 
   for (let i = 1; i < k; i++) {
     const distances = pixels.map((pixel) => {
@@ -19,7 +56,7 @@ function kMeansPlusPlus(pixels: PixelWithOklab[], k: number): PixelWithOklab[] {
     });
 
     const totalDist = distances.reduce((sum, d) => sum + d, 0);
-    let threshold = Math.random() * totalDist;
+    let threshold = rng.next() * totalDist;
 
     for (let j = 0; j < pixels.length; j++) {
       threshold -= distances[j];
@@ -27,6 +64,12 @@ function kMeansPlusPlus(pixels: PixelWithOklab[], k: number): PixelWithOklab[] {
         centroids.push({ ...pixels[j] });
         break;
       }
+    }
+
+    // Fallback if loop completes without selection
+    if (centroids.length === i) {
+      const fallbackIndex = rng.nextInt(0, pixels.length);
+      centroids.push({ ...pixels[fallbackIndex] });
     }
   }
 
@@ -41,18 +84,25 @@ export function kMeansClusteringOklab(
   if (pixels.length === 0) return [];
   if (pixels.length <= k) return pixels.map((p) => ({ ...p, weight: 1 / pixels.length }));
 
+  // Convert to OKLab
   const oklabPixels: PixelWithOklab[] = pixels.map((p) => ({
     ...p,
     oklab: rgbToOklab(p.r, p.g, p.b),
   }));
 
-  let centroids = kMeansPlusPlus(oklabPixels, k);
+  // Create deterministic RNG from pixel data
+  const seed = generateSeed(oklabPixels);
+  const rng = new SeededRandom(seed);
+
+  // Initialize centroids deterministically
+  let centroids = kMeansPlusPlus(oklabPixels, k, rng);
   let converged = false;
   let iteration = 0;
 
   while (!converged && iteration < maxIterations) {
     iteration++;
 
+    // Assign pixels to nearest centroid
     const clusters: PixelWithOklab[][] = Array.from({ length: k }, () => []);
 
     for (const pixel of oklabPixels) {
@@ -73,6 +123,7 @@ export function kMeansClusteringOklab(
       clusters[closest].push(pixel);
     }
 
+    // Compute new centroids
     const newCentroids = clusters.map((cluster, i) => {
       if (cluster.length === 0) return centroids[i];
 
@@ -88,6 +139,7 @@ export function kMeansClusteringOklab(
       return { ...rgb, oklab: avgOklab };
     });
 
+    // Check convergence (epsilon = 0.0001)
     converged = centroids.every(
       (c, i) =>
         Math.abs(c.oklab.l - newCentroids[i].oklab.l) < 0.0001 &&
@@ -98,6 +150,7 @@ export function kMeansClusteringOklab(
     centroids = newCentroids;
   }
 
+  // Calculate final cluster sizes
   const clusterSizes = centroids.map((_, i) => {
     return oklabPixels.filter((pixel) => {
       let minDist = Infinity;

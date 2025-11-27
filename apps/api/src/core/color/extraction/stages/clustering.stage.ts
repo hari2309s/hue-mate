@@ -19,15 +19,17 @@ export async function performClustering(
   bgPixels: PixelData[],
   numColors: number
 ): Promise<ClusteringResult> {
-  logger.info('Clustering stage starting...');
+  logger.info('Clustering stage starting (deterministic mode)...');
 
   const fgRatio = fgPixels.length / (fgPixels.length + bgPixels.length);
   const fgColorCount = Math.max(1, Math.round(numColors * fgRatio));
   const bgColorCount = Math.max(1, numColors - fgColorCount);
 
+  // Apply saturation bias (deterministic - no randomness)
   const biasedFgPixels = applySaturationBias(fgPixels);
   const biasedBgPixels = applySaturationBias(bgPixels);
 
+  // K-means clustering (now deterministic with seeding)
   const rawFgColors =
     biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount * 4) : [];
   const rawBgColors =
@@ -35,29 +37,33 @@ export async function performClustering(
 
   logger.info(`Generated ${rawFgColors.length} FG + ${rawBgColors.length} BG candidates`);
 
+  // Deduplication (deterministic - no random selection)
   const dedupedFg = deduplicateSimilarColors(rawFgColors, 0.35);
   const dedupedBg = deduplicateSimilarColors(rawBgColors, 0.35);
 
-  logger.info(`After initial dedup: ${dedupedFg.length} FG + ${dedupedBg.length} BG`);
+  logger.info(`After deduplication: ${dedupedFg.length} FG + ${dedupedBg.length} BG`);
 
+  // Hue diversity enforcement (deterministic - based on color values)
   const diverseFg = enforceHueDiversity(dedupedFg, 35);
   const diverseBg = enforceHueDiversity(dedupedBg, 35);
 
   logger.info(`After hue diversity: ${diverseFg.length} FG + ${diverseBg.length} BG`);
 
+  // Slice to target count
   const slicedFg = diverseFg.slice(0, fgColorCount);
   const slicedBg = diverseBg.slice(0, bgColorCount);
 
+  // Final cleanup (deterministic merge)
   const dominantFgColors = finalCleanup(slicedFg);
   const dominantBgColors = finalCleanup(slicedBg);
 
   logger.success(
-    `After final cleanup: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG colors`
+    `Final palette: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG colors`
   );
 
-  // Add back if we lost too many
+  // Add back colors if needed (deterministically from pool)
   if (dominantFgColors.length < Math.min(2, fgColorCount)) {
-    logger.info('Insufficient FG colors after cleanup, adding from pool');
+    logger.info('Adding FG colors from pool (deterministic)');
     const needed = Math.min(2, fgColorCount) - dominantFgColors.length;
     const additional = diverseFg
       .slice(fgColorCount, fgColorCount + needed + 2)
@@ -75,7 +81,7 @@ export async function performClustering(
   }
 
   if (dominantBgColors.length < Math.min(3, bgColorCount)) {
-    logger.info('Insufficient BG colors after cleanup, adding from pool');
+    logger.info('Adding BG colors from pool (deterministic)');
     const needed = Math.min(3, bgColorCount) - dominantBgColors.length;
     const additional = diverseBg
       .slice(bgColorCount, bgColorCount + needed + 2)
@@ -93,7 +99,7 @@ export async function performClustering(
   }
 
   logger.success(
-    `Final palette: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG colors`
+    `Final deterministic palette: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG`
   );
 
   return { dominantFgColors, dominantBgColors };
