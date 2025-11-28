@@ -1,41 +1,55 @@
-import type { PixelWithWeight } from '../../../types/segmentation';
+import type { PixelWithWeight, OklabColor } from '../../../types/segmentation';
 import { rgbToOklab, rgbToHsl } from '../conversion';
+import type { HSLValues } from '@hue-und-you/types';
+import { CLUSTERING_CONFIG } from '../../../config';
+
+interface ColorWithCache {
+  r: number;
+  g: number;
+  b: number;
+  weight: number;
+  oklab: OklabColor;
+  hsl: HSLValues;
+}
 
 export function deduplicateSimilarColors(
   colors: PixelWithWeight[],
-  minDistance: number = 0.5
+  minDistance: number = CLUSTERING_CONFIG.DEDUPLICATION_THRESHOLD
 ): PixelWithWeight[] {
   if (colors.length === 0) return [];
 
-  const unique: PixelWithWeight[] = [colors[0]];
+  // Pre-compute all conversions (optimization fix #6)
+  const cached: ColorWithCache[] = colors.map((c) => ({
+    ...c,
+    oklab: rgbToOklab(c.r, c.g, c.b),
+    hsl: rgbToHsl(c.r, c.g, c.b),
+  }));
 
-  for (let i = 1; i < colors.length; i++) {
-    const color = colors[i];
-    const oklab = rgbToOklab(color.r, color.g, color.b);
-    const hsl = rgbToHsl(color.r, color.g, color.b);
+  const unique: ColorWithCache[] = [cached[0]];
 
+  for (let i = 1; i < cached.length; i++) {
+    const color = cached[i];
     let isTooSimilar = false;
     let closestIndex = -1;
     let minDist = Infinity;
 
     for (let j = 0; j < unique.length; j++) {
-      const existingOklab = rgbToOklab(unique[j].r, unique[j].g, unique[j].b);
-      const existingHsl = rgbToHsl(unique[j].r, unique[j].g, unique[j].b);
+      const existing = unique[j];
 
-      const dl = oklab.l - existingOklab.l;
-      const da = oklab.a - existingOklab.a;
-      const db = oklab.b - existingOklab.b;
+      const dl = color.oklab.l - existing.oklab.l;
+      const da = color.oklab.a - existing.oklab.a;
+      const db = color.oklab.b - existing.oklab.b;
 
       const perceptualDist = Math.sqrt(dl * dl * 2 + da * da * 8 + db * db * 8);
 
-      let hueDiff = Math.abs(hsl.h - existingHsl.h);
+      let hueDiff = Math.abs(color.hsl.h - existing.hsl.h);
       if (hueDiff > 180) hueDiff = 360 - hueDiff;
 
-      const satDiff = Math.abs(hsl.s - existingHsl.s);
-      const lumDiff = Math.abs(hsl.l - existingHsl.l);
+      const satDiff = Math.abs(color.hsl.s - existing.hsl.s);
+      const lumDiff = Math.abs(color.hsl.l - existing.hsl.l);
 
-      const isNeutral = hsl.s < 20 || existingHsl.s < 20;
-      const isVeryNeutral = hsl.s < 10 || existingHsl.s < 10;
+      const isNeutral = color.hsl.s < 20 || existing.hsl.s < 20;
+      const isVeryNeutral = color.hsl.s < 10 || existing.hsl.s < 10;
 
       let effectiveThreshold = minDistance;
 
@@ -79,42 +93,46 @@ export function deduplicateSimilarColors(
     }
   }
 
-  return unique.sort((a, b) => b.weight - a.weight);
+  return unique
+    .map(({ r, g, b, weight }) => ({ r, g, b, weight }))
+    .sort((a, b) => b.weight - a.weight);
 }
 
 export function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
   if (colors.length <= 1) return colors;
 
-  const cleaned: PixelWithWeight[] = [colors[0]];
+  // Pre-compute conversions
+  const cached: ColorWithCache[] = colors.map((c) => ({
+    ...c,
+    oklab: rgbToOklab(c.r, c.g, c.b),
+    hsl: rgbToHsl(c.r, c.g, c.b),
+  }));
 
-  for (let i = 1; i < colors.length; i++) {
-    const color = colors[i];
-    const oklab = rgbToOklab(color.r, color.g, color.b);
-    const hsl = rgbToHsl(color.r, color.g, color.b);
+  const cleaned: ColorWithCache[] = [cached[0]];
 
+  for (let i = 1; i < cached.length; i++) {
+    const color = cached[i];
     let keepColor = true;
     let mergeIndex = -1;
 
     for (let j = 0; j < cleaned.length; j++) {
       const existing = cleaned[j];
-      const existingOklab = rgbToOklab(existing.r, existing.g, existing.b);
-      const existingHsl = rgbToHsl(existing.r, existing.g, existing.b);
 
-      const dl = oklab.l - existingOklab.l;
-      const da = oklab.a - existingOklab.a;
-      const db = oklab.b - existingOklab.b;
+      const dl = color.oklab.l - existing.oklab.l;
+      const da = color.oklab.a - existing.oklab.a;
+      const db = color.oklab.b - existing.oklab.b;
       const dist = Math.sqrt(dl * dl * 2 + da * da * 8 + db * db * 8);
 
-      if (dist < 0.35) {
+      if (dist < CLUSTERING_CONFIG.PERCEPTUAL_DISTANCE_THRESHOLD) {
         keepColor = false;
         mergeIndex = j;
         break;
       }
 
-      let hueDiff = Math.abs(hsl.h - existingHsl.h);
+      let hueDiff = Math.abs(color.hsl.h - existing.hsl.h);
       if (hueDiff > 180) hueDiff = 360 - hueDiff;
-      const satDiff = Math.abs(hsl.s - existingHsl.s);
-      const lumDiff = Math.abs(hsl.l - existingHsl.l);
+      const satDiff = Math.abs(color.hsl.s - existing.hsl.s);
+      const lumDiff = Math.abs(color.hsl.l - existing.hsl.l);
 
       if (hueDiff < 12 && satDiff < 12 && lumDiff < 12) {
         keepColor = false;
@@ -130,5 +148,7 @@ export function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
     }
   }
 
-  return cleaned.sort((a, b) => b.weight - a.weight);
+  return cleaned
+    .map(({ r, g, b, weight }) => ({ r, g, b, weight }))
+    .sort((a, b) => b.weight - a.weight);
 }

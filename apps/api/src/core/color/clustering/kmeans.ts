@@ -1,5 +1,6 @@
 import type { PixelData, PixelWithWeight, PixelWithOklab } from '../../../types/segmentation';
 import { rgbToOklab, oklabToOklch, oklchToRgb } from '../conversion';
+import { CLUSTERING_CONFIG } from '../../../config';
 
 // Seeded random number generator (LCG algorithm)
 class SeededRandom {
@@ -79,7 +80,7 @@ function kMeansPlusPlus(pixels: PixelWithOklab[], k: number, rng: SeededRandom):
 export function kMeansClusteringOklab(
   pixels: PixelData[],
   k: number,
-  maxIterations: number = 100
+  maxIterations: number = CLUSTERING_CONFIG.MAX_ITERATIONS
 ): PixelWithWeight[] {
   if (pixels.length === 0) return [];
   if (pixels.length <= k) return pixels.map((p) => ({ ...p, weight: 1 / pixels.length }));
@@ -139,12 +140,12 @@ export function kMeansClusteringOklab(
       return { ...rgb, oklab: avgOklab };
     });
 
-    // Check convergence (epsilon = 0.0001)
+    // Check convergence
     converged = centroids.every(
       (c, i) =>
-        Math.abs(c.oklab.l - newCentroids[i].oklab.l) < 0.0001 &&
-        Math.abs(c.oklab.a - newCentroids[i].oklab.a) < 0.0001 &&
-        Math.abs(c.oklab.b - newCentroids[i].oklab.b) < 0.0001
+        Math.abs(c.oklab.l - newCentroids[i].oklab.l) < CLUSTERING_CONFIG.CONVERGENCE_EPSILON &&
+        Math.abs(c.oklab.a - newCentroids[i].oklab.a) < CLUSTERING_CONFIG.CONVERGENCE_EPSILON &&
+        Math.abs(c.oklab.b - newCentroids[i].oklab.b) < CLUSTERING_CONFIG.CONVERGENCE_EPSILON
     );
 
     centroids = newCentroids;

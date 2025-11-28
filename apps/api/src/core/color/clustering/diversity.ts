@@ -1,9 +1,10 @@
 import type { PixelWithWeight } from '../../../types/segmentation';
 import { rgbToHsl } from '../conversion';
+import { CLUSTERING_CONFIG } from '../../../config';
 
 export function enforceHueDiversity(
   colors: PixelWithWeight[],
-  minHueDifference: number = 40
+  minHueDifference: number = CLUSTERING_CONFIG.MIN_HUE_DIFFERENCE
 ): PixelWithWeight[] {
   if (colors.length === 0) return [];
 
