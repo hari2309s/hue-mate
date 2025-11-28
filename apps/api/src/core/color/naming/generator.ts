@@ -11,6 +11,16 @@ import {
 } from './palettes';
 import { getPaletteTracker } from './palette-tracker';
 
+function sanitizeColorName(name: string): string {
+  // Remove any potentially harmful characters (security fix #12)
+  const sanitized = name
+    .replace(/[^a-zA-Z0-9\s\-]/g, '') // Keep only alphanumeric, spaces, hyphens
+    .trim();
+
+  // Ensure we have a valid name
+  return sanitized.length > 0 ? sanitized : 'Color';
+}
+
 function isNeutralColor(hsl: HSLValues): boolean {
   if (hsl.s <= NEUTRAL_THRESHOLD) return true;
   if (hsl.s <= 18 && (hsl.l <= 25 || hsl.l >= 85)) return true;
@@ -112,13 +122,13 @@ function hasConflictingDescriptor(baseName: string, descriptor: string): boolean
 }
 
 function finalizeName(base: string, descriptor: string | null): string {
-  if (!descriptor) return base;
+  if (!descriptor) return sanitizeColorName(base);
 
   if (hasConflictingDescriptor(base, descriptor)) {
-    return base;
+    return sanitizeColorName(base);
   }
 
-  return `${descriptor} ${base}`;
+  return sanitizeColorName(`${descriptor} ${base}`);
 }
 
 export function generateColorName(rgb: RGBValues): string {
@@ -132,13 +142,13 @@ export function generateColorName(rgb: RGBValues): string {
   if (isNeutralColor(hsl)) {
     const name = tracker.pickName(NEUTRAL_NAMES, tone, seed, 'neutral');
     tracker.markUsed(name);
-    return name;
+    return sanitizeColorName(name);
   }
 
   if (isEarthyTone(hsl)) {
     const name = tracker.pickName(EARTH_TONES, tone, seed, 'earth');
     tracker.markUsed(name);
-    return name;
+    return sanitizeColorName(name);
   }
 
   const palette = getHuePalette(hsl.h);
@@ -152,5 +162,10 @@ export function generateColorName(rgb: RGBValues): string {
 }
 
 export function generateCssVariableName(colorName: string): string {
-  return `--color-${colorName.toLowerCase().replace(/\s+/g, '-')}`;
+  const sanitized = colorName
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-]/g, '');
+
+  return `--color-${sanitized || 'unknown'}`;
 }
