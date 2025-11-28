@@ -309,7 +309,7 @@ const FileUploader = ({
                       whileTap={{ scale: 0.9 }}
                       onClick={() => removeFile(index)}
                       disabled={isBusy}
-                      className="rounded-full p-1.5 hover:bg-(--muted) transition-colors disabled:opacity-50"
+                      className="rounded-sm p-1.5 hover:bg-(--muted) transition-colors disabled:opacity-50"
                       aria-label={`Remove ${file.name}`}
                       type="button"
                     >
