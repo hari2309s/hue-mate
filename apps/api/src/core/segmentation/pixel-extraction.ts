@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { APP_CONFIG } from '../../config';
+import { APP_CONFIG, BRIGHTNESS_CONFIG } from '../../config';
 import { logger } from '../../utils';
 import type { ForegroundMask, ExtractedPixels, PixelData } from '../../types/segmentation';
 
@@ -13,7 +13,10 @@ export async function extractPixels(
   const image = sharp(imageBuffer);
   const metadata = await image.metadata();
 
-  logger.success(`Image dimensions: ${metadata.width}x${metadata.height}`);
+  logger.success('Image dimensions', {
+    width: metadata.width,
+    height: metadata.height,
+  });
 
   const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
 
@@ -31,7 +34,12 @@ export async function extractPixels(
   // DETERMINISTIC sampling: always use the same rate and pattern
   const sampleRate = Math.max(1, Math.floor(totalPixels / APP_CONFIG.MAX_SAMPLES));
 
-  logger.success(`Sampling every ${sampleRate} pixel(s) from ${totalPixels} total (deterministic)`);
+  logger.success('Sampling configuration', {
+    totalPixels,
+    maxSamples: APP_CONFIG.MAX_SAMPLES,
+    sampleRate,
+    deterministic: true,
+  });
 
   // Sample pixels in a consistent pattern (every Nth pixel)
   for (let i = 0; i < data.length; i += sampleRate * info.channels) {
@@ -42,7 +50,10 @@ export async function extractPixels(
     const brightness = (r + g + b) / 3;
 
     // Apply consistent brightness filter
-    if (brightness > 15 && brightness < 240) {
+    if (
+      brightness > BRIGHTNESS_CONFIG.MIN_BRIGHTNESS &&
+      brightness < BRIGHTNESS_CONFIG.MAX_BRIGHTNESS
+    ) {
       pixels.push({ r, g, b });
 
       if (maskData) {
@@ -54,7 +65,10 @@ export async function extractPixels(
     }
   }
 
-  logger.success(`Extracted ${pixels.length} pixels (deterministic sampling)`);
+  logger.success('Pixel extraction complete', {
+    extractedPixels: pixels.length,
+    sampling: 'deterministic',
+  });
 
   return { pixels, isForeground };
 }
