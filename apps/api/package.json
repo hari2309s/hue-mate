@@ -25,6 +25,7 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
     "nearest-pantone": "^1.0.1",
     "pg": "^8.16.3",
     "sharp": "^0.34.5",
