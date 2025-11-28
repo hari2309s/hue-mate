@@ -4,4 +4,47 @@ export const APP_CONFIG = {
   MAX_IMAGE_SIZE_MB: 10,
   MAX_SAMPLES: 5000,
   PARTIAL_COLOR_COUNT: 5,
+  PROCESSING_TIMEOUT_MS: 5 * 60 * 1000, // 5 minutes
+  TEMP_FILE_CLEANUP_MS: 24 * 60 * 60 * 1000, // 24 hours
+  CLEANUP_INTERVAL_MS: 60 * 60 * 1000, // 1 hour
+} as const;
+
+// Saturation bias constants
+export const SATURATION_CONFIG = {
+  HIGH_THRESHOLD: 75,
+  MEDIUM_THRESHOLD: 50,
+  LOW_THRESHOLD: 25,
+  HIGH_BOOST: 12,
+  MEDIUM_BOOST: 7,
+  LOW_BOOST: 2.5,
+  NEUTRAL_BOOST: 0.3,
+  LIGHTNESS_BOOST: 1.8,
+  OPTIMAL_LIGHTNESS_MIN: 20,
+  OPTIMAL_LIGHTNESS_MAX: 80,
+  HIGH_POWER: 1.5,
+  MEDIUM_POWER: 1.6,
+  LOW_POWER: 1.3,
+} as const;
+
+// Clustering constants
+export const CLUSTERING_CONFIG = {
+  MAX_ITERATIONS: 100,
+  CONVERGENCE_EPSILON: 0.0001,
+  DEDUPLICATION_THRESHOLD: 0.5,
+  MIN_HUE_DIFFERENCE: 35,
+  PERCEPTUAL_DISTANCE_THRESHOLD: 0.35,
+} as const;
+
+// Brightness filter constants
+export const BRIGHTNESS_CONFIG = {
+  MIN_BRIGHTNESS: 15,
+  MAX_BRIGHTNESS: 240,
+} as const;
+
+// Rate limit constants
+export const RATE_LIMIT_CONFIG = {
+  UPLOAD_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  UPLOAD_MAX_REQUESTS: 10,
+  PROCESS_WINDOW_MS: 1 * 60 * 1000, // 1 minute
+  PROCESS_MAX_REQUESTS: 50,
 } as const;
