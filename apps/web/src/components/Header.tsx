@@ -13,7 +13,7 @@ const Header = () => {
         whileHover={{ scale: 1.05 }}
         className="flex flex-col justify-center items-center space-x-2 w-full"
       >
-        <Image src="/palette.png" alt="Logo" width={28} height={28} />
+        <Image src="/hue.png" alt="Logo" width={50} height={50} />
         <motion.h1 className="text-3xl font-medium text-soft-orange">hue-und-you</motion.h1>
       </motion.div>
     </header>

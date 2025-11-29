@@ -6,7 +6,6 @@
     { "path": "./packages/api-schema" },
     { "path": "./packages/config" },
     { "path": "./packages/db" },
-    { "path": "./packages/types" },
-    { "path": "./packages/ui" }
+    { "path": "./packages/types" }
   ]
 }
