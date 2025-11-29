@@ -30,10 +30,6 @@ const uploadLimiter = rateLimit({
 const processLimiter = rateLimit({
   windowMs: RATE_LIMIT_CONFIG.PROCESS_WINDOW_MS,
   max: RATE_LIMIT_CONFIG.PROCESS_MAX_REQUESTS,
-  keyGenerator: (req) => {
-    // Rate limit by imageId for stream, by IP for processing
-    return (req.params.imageId as string) || (req.ip as string);
-  },
   message: {
     error: 'Too many processing requests, please try again later',
   },
@@ -80,7 +76,6 @@ export function createApp() {
     createExpressMiddleware({
       router: appRouter,
       createContext: ({ req, res }) => {
-        // Apply rate limiting only to uploadImage
         if (req.url?.includes('uploadImage')) {
           return new Promise((resolve, reject) => {
             uploadLimiter(req as any, res as any, (err?: any) => {
