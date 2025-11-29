@@ -197,7 +197,8 @@ export default function ExtractionMetadata({
         label="Processing time"
         value={
           <span className="text-(--foreground)">
-            Extracted in <strong>{derivedValues.processingSeconds}s</strong> using{' '}
+            Extracted {metadata.colorCount && <strong>{metadata.colorCount} colors</strong>}
+            in <strong>{derivedValues.processingSeconds}s</strong> using{' '}
             <strong>{derivedValues.algorithmLabel}</strong>
           </span>
         }
