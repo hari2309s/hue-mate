@@ -1,20 +1,10 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import type { UploadStatus, UploadProgress, ColorPaletteResult } from '@hue-und-you/types';
+import { useAppStore } from '@/src/stores/useAppStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-const STATUS_MESSAGES: Record<UploadStatus, string> = {
-  idle: 'Ready to upload',
-  uploading: 'Uploading image...',
-  processing: 'Processing image...',
-  segmenting: 'Segmenting foreground/background...',
-  extracting: 'Extracting dominant colors...',
-  complete: 'Color extraction complete!',
-  error: 'An error occurred',
-} as const;
 
 const POLLING_INTERVAL_MS = 1000;
 const UPLOAD_PROGRESS_STEPS = {
@@ -31,13 +21,6 @@ interface UploadOptions {
 
 interface UseImageUploadReturn {
   upload: (file: File, options?: UploadOptions) => Promise<void>;
-  progress: UploadProgress;
-  result: ColorPaletteResult | null;
-  reset: () => void;
-  isUploading: boolean;
-  isProcessing: boolean;
-  isComplete: boolean;
-  hasError: boolean;
 }
 
 class UploadError extends Error {
@@ -123,10 +106,7 @@ async function fetchProcessingStatus(imageId: string, signal: AbortSignal) {
   return data.result?.data;
 }
 
-async function fetchResult(
-  imageId: string,
-  signal: AbortSignal
-): Promise<ColorPaletteResult | null> {
+async function fetchResult(imageId: string, signal: AbortSignal) {
   const response = await fetch(
     `${API_URL}/trpc/getResult?input=${encodeURIComponent(JSON.stringify({ imageId }))}`,
     { signal }
@@ -136,12 +116,8 @@ async function fetchResult(
 }
 
 export function useImageUpload(): UseImageUploadReturn {
-  const [progress, setProgress] = useState<UploadProgress>({
-    status: 'idle',
-    progress: 0,
-    message: STATUS_MESSAGES.idle,
-  });
-  const [result, setResult] = useState<ColorPaletteResult | null>(null);
+  const updateProgress = useAppStore((state) => state.updateProgress);
+  const setResult = useAppStore((state) => state.setResult);
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const toastIdRef = useRef<string | number | null>(null);
@@ -171,21 +147,7 @@ export function useImageUpload(): UseImageUploadReturn {
     };
   }, []);
 
-  const updateProgress = useCallback(
-    (status: UploadStatus, progressVal: number, message?: string, error?: string) => {
-      if (!isMountedRef.current) return;
-
-      setProgress({
-        status,
-        progress: progressVal,
-        message: message || STATUS_MESSAGES[status],
-        error,
-      });
-    },
-    []
-  );
-
-  const updateToast = useCallback((status: UploadStatus, message: string) => {
+  const updateToast = useCallback((status: string, message: string) => {
     if (!isMountedRef.current || !toastIdRef.current) return;
 
     if (status === 'complete') {
@@ -246,7 +208,7 @@ export function useImageUpload(): UseImageUploadReturn {
         }
       }
     },
-    [updateProgress, updateToast]
+    [updateProgress, updateToast, setResult]
   );
 
   const upload = useCallback(
@@ -322,37 +284,8 @@ export function useImageUpload(): UseImageUploadReturn {
         }
       }
     },
-    [updateProgress, pollStatus]
+    [updateProgress, pollStatus, setResult]
   );
 
-  const reset = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-
-    if (toastIdRef.current) {
-      toast.dismiss(toastIdRef.current);
-      toastIdRef.current = null;
-    }
-
-    setProgress({ status: 'idle', progress: 0, message: STATUS_MESSAGES.idle });
-    setResult(null);
-  }, []);
-
-  return {
-    upload,
-    progress,
-    result,
-    reset,
-    isUploading: progress.status === 'uploading',
-    isProcessing: ['processing', 'segmenting', 'extracting'].includes(progress.status),
-    isComplete: progress.status === 'complete',
-    hasError: progress.status === 'error',
-  };
+  return { upload };
 }

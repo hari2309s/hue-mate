@@ -1,23 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
 import Header from '@/src/components/Header';
 import FileUploader from '@/src/components/FileUploader';
 import ColorPaletteDisplay from '@/src/components/ColorPaletteDisplay';
 import ImagePreview from '@/src/components/ImagePreview';
-import type { ColorPaletteResult } from '@hue-und-you/types';
+import { useAppStore } from '@/src/stores/useAppStore';
 
 export default function HomePage() {
-  const [result, setResult] = useState<ColorPaletteResult | null>(null);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-
-  const handleResultChange = useCallback((newResult: ColorPaletteResult | null) => {
-    setResult(newResult);
-  }, []);
-
-  const handlePreviewChange = useCallback((newPreview: string | null) => {
-    setPreviewSrc(newPreview);
-  }, []);
+  const result = useAppStore((state) => state.result);
+  const previewSrc = useAppStore((state) => state.previewSrc);
 
   return (
     <div className="min-h-screen w-full bg-(--background) flex flex-col">
@@ -33,8 +24,6 @@ export default function HomePage() {
             <FileUploader
               maxSizeMB={10}
               acceptedTypes={['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']}
-              onResultChange={handleResultChange}
-              onPreviewChange={handlePreviewChange}
             />
             <ImagePreview imageSrc={previewSrc} />
           </section>

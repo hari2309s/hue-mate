@@ -1,20 +1,18 @@
 'use client';
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, FileIcon, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { useImageUpload } from '@/src/hooks/useImageUpload';
-import type { ColorPaletteResult } from '@hue-und-you/types';
+import { useAppStore } from '@/src/stores/useAppStore';
 
 interface FileWithPreview extends File {
   preview?: string;
 }
 
 interface FileUploaderProps {
-  onResultChange?: (result: ColorPaletteResult | null) => void;
-  onPreviewChange?: (previewUrl: string | null) => void;
   maxSizeMB?: number;
   acceptedTypes?: string[];
 }
@@ -22,24 +20,24 @@ interface FileUploaderProps {
 const MAX_SIZE_MB = 10;
 
 const FileUploader = ({
-  onResultChange,
-  onPreviewChange,
   maxSizeMB = MAX_SIZE_MB,
   acceptedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'],
 }: FileUploaderProps) => {
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const { upload, progress, result, reset, isUploading, isProcessing, isComplete, hasError } =
-    useImageUpload();
+
+  const progress = useAppStore((state) => state.progress);
+  const isUploading = useAppStore((state) => state.isUploading);
+  const isProcessing = useAppStore((state) => state.isProcessing);
+  const isComplete = useAppStore((state) => state.isComplete);
+  const hasError = useAppStore((state) => state.hasError);
+  const setPreviewSrc = useAppStore((state) => state.setPreviewSrc);
+  const reset = useAppStore((state) => state.reset);
+
+  const { upload } = useImageUpload();
 
   const maxBytes = maxSizeMB * 1024 * 1024;
   const isBusy = isUploading || isProcessing;
-
-  useEffect(() => {
-    if (onResultChange) {
-      onResultChange(result);
-    }
-  }, [result, onResultChange]);
 
   const validateFile = useCallback(
     (file: File): string | null => {
@@ -93,7 +91,7 @@ const FileUploader = ({
         // Clear previous files
         files.forEach((f) => f.preview && URL.revokeObjectURL(f.preview));
         setFiles([validFile]);
-        onPreviewChange?.(validFile.preview ?? null);
+        setPreviewSrc(validFile.preview ?? null);
 
         // Start upload
         await upload(validFile, {
@@ -103,7 +101,7 @@ const FileUploader = ({
         });
       }
     },
-    [files, validateFile, upload, isBusy, onPreviewChange]
+    [files, validateFile, upload, isBusy, setPreviewSrc]
   );
 
   const handleDragOver = useCallback(
@@ -158,10 +156,10 @@ const FileUploader = ({
       }
       const newFiles = files.filter((_, i) => i !== index);
       setFiles(newFiles);
-      onPreviewChange?.(newFiles[0]?.preview ?? null);
+      setPreviewSrc(newFiles[0]?.preview ?? null);
       reset();
     },
-    [files, reset, onPreviewChange]
+    [files, reset, setPreviewSrc]
   );
 
   const formatFileSize = (bytes: number): string => {
