@@ -156,6 +156,7 @@ export interface ColorPaletteResult {
 
 export interface ExtractionMetadata {
   processingTimeMs: number;
+  colorCount: number;
   algorithm: 'kmeans++' | 'weighted-kmeans';
   colorDiversity: number;
   averageSaturation: number;
