@@ -105,6 +105,7 @@ export function buildExtractionMetadata(
 
   return {
     processingTimeMs: Date.now() - processingStartTime,
+    colorCount: palette.length,
     algorithm: 'weighted-kmeans',
     colorDiversity,
     averageSaturation: Math.round(averageSaturation),

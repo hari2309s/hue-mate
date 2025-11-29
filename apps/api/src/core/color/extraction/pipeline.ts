@@ -86,11 +86,16 @@ export async function extractColorsFromImage(
   options: ExtractionOptions = {},
   hooks: ExtractionHooks = {}
 ): Promise<ColorPaletteResult> {
-  const { numColors = 10, generateHarmonies: genHarm = true } = options;
+  const { numColors, generateHarmonies: genHarm = true } = options;
   const processingStart = Date.now();
   let partialSent = false;
 
   logger.info('🎨 Starting Color Extraction Pipeline...');
+  if (numColors) {
+    logger.info(`User requested ${numColors} colors (will be used as target)`);
+  } else {
+    logger.info('No color count specified - using adaptive algorithm');
+  }
 
   resetPaletteNameTracker();
 
@@ -105,7 +110,7 @@ export async function extractColorsFromImage(
     segmentationResult
   );
 
-  // STAGE 3: Clustering
+  // STAGE 3: Clustering (now with optional numColors)
   logger.info('🔬 Stage 3: Clustering...');
   const { dominantFgColors, dominantBgColors } = await performClustering(
     fgPixels,
@@ -144,6 +149,8 @@ export async function extractColorsFromImage(
     hooks.onPartial?.(palette.slice(0, Math.min(APP_CONFIG.PARTIAL_COLOR_COUNT, palette.length)));
     partialSent = true;
   }
+
+  logger.success(`✨ Extracted ${palette.length} unique colors`);
 
   // STAGE 5: Export Generation
   logger.info('📦 Stage 5: Generating exports...');

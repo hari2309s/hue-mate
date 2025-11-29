@@ -14,22 +14,101 @@ export interface ClusteringResult {
   dominantBgColors: PixelWithWeight[];
 }
 
+/**
+ * Determines optimal number of colors to extract based on image characteristics
+ */
+function determineOptimalColorCount(
+  fgPixels: PixelData[],
+  bgPixels: PixelData[],
+  requestedCount?: number
+): number {
+  const totalPixels = fgPixels.length + bgPixels.length;
+
+  if (requestedCount) {
+    return requestedCount;
+  }
+
+  // Adaptive color count based on pixel diversity
+  // Sample pixels to estimate color diversity
+  const sampleSize = Math.min(500, totalPixels);
+  const step = Math.floor(totalPixels / sampleSize);
+  const samples: PixelData[] = [];
+
+  for (let i = 0; i < fgPixels.length; i += step) {
+    samples.push(fgPixels[i]);
+  }
+  for (let i = 0; i < bgPixels.length; i += step) {
+    samples.push(bgPixels[i]);
+  }
+
+  // Calculate color variance in OKLab space
+  const oklabSamples = samples.map((p) => rgbToOklab(p.r, p.g, p.b));
+
+  let sumL = 0,
+    sumA = 0,
+    sumB = 0;
+  for (const oklab of oklabSamples) {
+    sumL += oklab.l;
+    sumA += oklab.a;
+    sumB += oklab.b;
+  }
+
+  const avgL = sumL / oklabSamples.length;
+  const avgA = sumA / oklabSamples.length;
+  const avgB = sumB / oklabSamples.length;
+
+  let variance = 0;
+  for (const oklab of oklabSamples) {
+    const dl = oklab.l - avgL;
+    const da = oklab.a - avgA;
+    const db = oklab.b - avgB;
+    variance += Math.sqrt(dl * dl + da * da + db * db);
+  }
+  variance /= oklabSamples.length;
+
+  // Map variance to color count
+  // Low variance (0-0.1): 5-8 colors (monochromatic/limited palette)
+  // Medium variance (0.1-0.3): 8-12 colors (typical photos)
+  // High variance (0.3+): 12-15 colors (vibrant/diverse images)
+
+  let optimalCount: number;
+  if (variance < 0.1) {
+    optimalCount = Math.round(5 + variance * 30); // 5-8 colors
+  } else if (variance < 0.3) {
+    optimalCount = Math.round(8 + (variance - 0.1) * 20); // 8-12 colors
+  } else {
+    optimalCount = Math.round(12 + Math.min((variance - 0.3) * 10, 3)); // 12-15 colors
+  }
+
+  logger.info(`Determined optimal color count: ${optimalCount} (variance: ${variance.toFixed(3)})`);
+
+  return Math.max(5, Math.min(15, optimalCount));
+}
+
 export async function performClustering(
   fgPixels: PixelData[],
   bgPixels: PixelData[],
-  numColors: number
+  requestedColorCount?: number
 ): Promise<ClusteringResult> {
   logger.info('Clustering stage starting (deterministic mode)...');
 
+  // Determine optimal color count
+  const optimalCount = determineOptimalColorCount(fgPixels, bgPixels, requestedColorCount);
+  logger.info(
+    `Target color count: ${optimalCount}${requestedColorCount ? ' (user-requested)' : ' (auto-detected)'}`
+  );
+
   const fgRatio = fgPixels.length / (fgPixels.length + bgPixels.length);
-  const fgColorCount = Math.max(1, Math.round(numColors * fgRatio));
-  const bgColorCount = Math.max(1, numColors - fgColorCount);
+  const fgColorCount = Math.max(2, Math.round(optimalCount * Math.max(0.3, fgRatio)));
+  const bgColorCount = Math.max(2, optimalCount - fgColorCount);
+
+  logger.info(`Distributing colors: ${fgColorCount} foreground + ${bgColorCount} background`);
 
   // Apply saturation bias (deterministic - no randomness)
   const biasedFgPixels = applySaturationBias(fgPixels);
   const biasedBgPixels = applySaturationBias(bgPixels);
 
-  // K-means clustering (now deterministic with seeding)
+  // K-means clustering with larger initial pool for better quality
   const rawFgColors =
     biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount * 4) : [];
   const rawBgColors =
@@ -62,9 +141,10 @@ export async function performClustering(
   );
 
   // Add back colors if needed (deterministically from pool)
-  if (dominantFgColors.length < Math.min(2, fgColorCount)) {
+  const minFgColors = Math.min(2, fgColorCount);
+  if (dominantFgColors.length < minFgColors) {
     logger.info('Adding FG colors from pool (deterministic)');
-    const needed = Math.min(2, fgColorCount) - dominantFgColors.length;
+    const needed = minFgColors - dominantFgColors.length;
     const additional = diverseFg
       .slice(fgColorCount, fgColorCount + needed + 2)
       .filter((candidate) => {
@@ -80,9 +160,10 @@ export async function performClustering(
     dominantFgColors.push(...additional.slice(0, needed));
   }
 
-  if (dominantBgColors.length < Math.min(3, bgColorCount)) {
+  const minBgColors = Math.min(2, bgColorCount);
+  if (dominantBgColors.length < minBgColors) {
     logger.info('Adding BG colors from pool (deterministic)');
-    const needed = Math.min(3, bgColorCount) - dominantBgColors.length;
+    const needed = minBgColors - dominantBgColors.length;
     const additional = diverseBg
       .slice(bgColorCount, bgColorCount + needed + 2)
       .filter((candidate) => {
@@ -99,7 +180,7 @@ export async function performClustering(
   }
 
   logger.success(
-    `Final deterministic palette: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG`
+    `Final deterministic palette: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG (total: ${dominantFgColors.length + dominantBgColors.length})`
   );
 
   return { dominantFgColors, dominantBgColors };

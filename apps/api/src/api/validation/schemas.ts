@@ -48,9 +48,9 @@ export const processImageSchema = z.object({
       numColors: z
         .number()
         .int()
-        .min(1, 'Must extract at least 1 color')
+        .min(3, 'Must extract at least 3 colors')
         .max(20, 'Cannot extract more than 20 colors')
-        .default(10),
+        .optional(),
       includeBackground: z.boolean().default(true),
       generateHarmonies: z.boolean().default(true),
     })
@@ -58,7 +58,7 @@ export const processImageSchema = z.object({
 });
 
 export const getResultSchema = z.object({
-  imageId: z.string().uuid('Invalid image ID format'),
+  imageId: z.uuid('Invalid image ID format'),
 });
 
 export type UploadImageInput = z.infer<typeof uploadImageSchema>;
