@@ -46,7 +46,6 @@ hue-und-you/
 ├── packages/
 │   ├── api-schema/       # Shared tRPC router & Zod schemas
 │   ├── types/            # Centralized TypeScript types
-│   ├── ui/               # Reusable React UI primitives
 │   ├── db/               # Drizzle ORM schemas (PostgreSQL)
 │   └── config/           # Shared configs (Tailwind, TypeScript, ESLint)
 └── scripts/              # Build & cleanup utilities
