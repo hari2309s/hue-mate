@@ -17,7 +17,6 @@ export function computeColorSeparation(colors: ExtractedColor[]): number {
 
   let totalDistance = 0;
   let count = 0;
-  const distances: number[] = [];
 
   for (let i = 0; i < colors.length; i++) {
     for (let j = i + 1; j < colors.length; j++) {
@@ -33,7 +32,6 @@ export function computeColorSeparation(colors: ExtractedColor[]): number {
 
       const distance = Math.sqrt(dl * dl + dc * dc + dh * dh);
 
-      distances.push(distance);
       totalDistance += distance;
       count++;
     }
@@ -81,7 +79,7 @@ export function buildSuggestedUsage(
 
 export interface SegmentationResultData {
   foregroundMask: any;
-  method: 'mask2former' | 'fallback-luminance';
+  method: 'mask2former' | 'segformer' | 'fallback-luminance';
   quality: 'high' | 'medium' | 'low';
   usedFallback: boolean;
   confidence: number;
