@@ -84,7 +84,7 @@ async function startProcessing(
     body: JSON.stringify({
       imageId,
       options: {
-        numColors: options.numColors ?? 10,
+        numColors: options.numColors,
         includeBackground: options.includeBackground ?? true,
         generateHarmonies: options.generateHarmonies ?? true,
       },
