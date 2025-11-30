@@ -121,13 +121,15 @@ export interface ExtractedColor {
   metadata: ColorMetadata;
 }
 
-// Segmentation Info
+export type SegmentationMethod = 'mask2former' | 'segformer' | 'fallback-luminance';
+export type SegmentationQuality = 'high' | 'medium' | 'low';
+
 export interface SegmentInfo {
   foreground: { pixel_percentage: number };
   background: { pixel_percentage: number };
   categories: string[];
-  method?: 'mask2former' | 'fallback-luminance';
-  quality?: 'high' | 'medium' | 'low';
+  method?: SegmentationMethod;
+  quality?: SegmentationQuality;
 }
 
 // Export Formats
@@ -154,6 +156,7 @@ export interface ColorPaletteResult {
   metadata: ExtractionMetadata;
 }
 
+// Extraction Metadata
 export interface ExtractionMetadata {
   processingTimeMs: number;
   colorCount: number;
@@ -163,7 +166,7 @@ export interface ExtractionMetadata {
   dominantTemperature: 'warm' | 'cool' | 'neutral';
   suggestedUsage: string;
   segmentationQuality: {
-    method: 'mask2former' | 'segformer' | 'fallback-luminance';
+    method: SegmentationMethod;
     confidence: 'high' | 'medium' | 'low';
     foregroundDetected: boolean;
     usedFallback: boolean;
