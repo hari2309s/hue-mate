@@ -94,6 +94,7 @@ const FileUploader = ({
         setPreviewSrc(validFile.preview ?? null);
 
         await upload(validFile, {
+          numColors: 20,
           includeBackground: true,
           generateHarmonies: true,
         });
