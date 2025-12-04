@@ -8,7 +8,7 @@ import {
 } from '../../../color/clustering';
 import { rgbToOklab } from '../../../color/conversion';
 import type { PixelData } from '../../../../types/segmentation';
-import type { IClusteringService, ClusteringResult, ClusteringOptions } from '../interfaces';
+import type { IClusteringService, ClusteringResult, ClusteringOptions } from '../types';
 
 export class ClusteringService implements IClusteringService {
   async cluster(

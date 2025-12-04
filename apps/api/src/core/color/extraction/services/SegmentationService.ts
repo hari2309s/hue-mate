@@ -5,7 +5,7 @@ import type {
   SegmentationResult,
   SegmentationMethod,
   SegmentationQuality,
-} from '../interfaces';
+} from '../types';
 
 export class SegmentationService implements ISegmentationService {
   async segment(imageBuffer: Buffer): Promise<SegmentationResult> {

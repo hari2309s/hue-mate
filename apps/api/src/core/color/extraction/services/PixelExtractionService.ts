@@ -1,8 +1,8 @@
 import sharp from 'sharp';
 import { logger } from '../../../../utils';
 import { extractPixels, splitPixelsByLuminance } from '../../../segmentation';
-import type { IPixelExtractionService, PixelExtractionResult } from '../interfaces';
-import type { SegmentationResult } from '../interfaces';
+import type { IPixelExtractionService, PixelExtractionResult } from '../types';
+import type { SegmentationResult } from '../types';
 
 export class PixelExtractionService implements IPixelExtractionService {
   async extract(

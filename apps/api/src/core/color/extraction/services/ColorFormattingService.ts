@@ -9,7 +9,7 @@ import {
   generateCssVariableName,
   resetPaletteNameTracker,
 } from '../../../color';
-import type { IColorFormattingService, ColorFormattingOptions } from '../interfaces';
+import type { IColorFormattingService, ColorFormattingOptions } from '../types';
 
 export class ColorFormattingService implements IColorFormattingService {
   async format(
