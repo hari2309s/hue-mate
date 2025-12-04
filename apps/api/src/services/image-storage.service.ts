@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { logger } from '../utils';
 import { APP_CONFIG } from '../config';
+import { StorageError } from '../utils/errors';
 
 export interface ImageData {
   buffer: Buffer;
@@ -17,7 +18,7 @@ interface ImageMetadata {
 }
 
 class ImageStorageService {
-  private imageStore = new Map<string, string>(); // Map<id, filePath>
+  private imageStore = new Map<string, string>();
   private metadataStore = new Map<string, ImageMetadata>();
   private tempDir: string;
   private initialized: boolean = false;
@@ -33,15 +34,27 @@ class ImageStorageService {
       await fs.mkdir(this.tempDir, { recursive: true });
       logger.success('Image storage initialized', { tempDir: this.tempDir });
       this.initialized = true;
-    } catch (err) {
-      logger.error('Failed to create temp directory', { error: err });
-      throw err;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error(err, { operation: 'storage_initialization' });
+      throw new StorageError('Failed to initialize storage', {
+        tempDir: this.tempDir,
+        error: err.message,
+      });
     }
   }
 
   async set(id: string, data: ImageData): Promise<void> {
     if (!this.initialized) {
       await this.initialize();
+    }
+
+    if (!id || typeof id !== 'string') {
+      throw new StorageError('Invalid image ID', { id });
+    }
+
+    if (!Buffer.isBuffer(data.buffer) || data.buffer.length === 0) {
+      throw new StorageError('Invalid image buffer', { id });
     }
 
     const filePath = path.join(this.tempDir, `${id}.img`);
@@ -60,13 +73,27 @@ class ImageStorageService {
         filename: data.filename,
         size: data.buffer.length,
       });
-    } catch (err) {
-      logger.error('Failed to store image', { imageId: id, error: err });
-      throw err;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error(err, { operation: 'image_store', imageId: id });
+
+      // Cleanup on failure
+      this.imageStore.delete(id);
+      this.metadataStore.delete(id);
+
+      throw new StorageError('Failed to store image', {
+        imageId: id,
+        error: err.message,
+      });
     }
   }
 
   async get(id: string): Promise<ImageData | undefined> {
+    if (!id || typeof id !== 'string') {
+      logger.warn('Invalid image ID requested', { id });
+      return undefined;
+    }
+
     const filePath = this.imageStore.get(id);
     const metadata = this.metadataStore.get(id);
 
@@ -81,8 +108,14 @@ class ImageStorageService {
         filename: metadata.filename,
         contentType: metadata.contentType,
       };
-    } catch (err) {
-      logger.warn('Failed to read image file', { imageId: id, error: err });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.warn('Failed to read image file', {
+        imageId: id,
+        error: err.message,
+        code: (error as any).code,
+      });
+
       // Clean up stale references
       this.imageStore.delete(id);
       this.metadataStore.delete(id);
@@ -103,8 +136,14 @@ class ImageStorageService {
       this.metadataStore.delete(id);
       logger.info('Image deleted', { imageId: id });
       return true;
-    } catch (err) {
-      logger.warn('Failed to delete image file', { imageId: id, error: err });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.warn('Failed to delete image file', {
+        imageId: id,
+        error: err.message,
+        code: (error as any).code,
+      });
+
       // Clean up references even if file deletion fails
       this.imageStore.delete(id);
       this.metadataStore.delete(id);
@@ -118,8 +157,14 @@ class ImageStorageService {
 
   async clear(): Promise<void> {
     const ids = Array.from(this.imageStore.keys());
-    await Promise.all(ids.map((id) => this.delete(id)));
-    logger.info('All images cleared');
+    const results = await Promise.allSettled(ids.map((id) => this.delete(id)));
+
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed > 0) {
+      logger.warn('Some images failed to clear', { failed, total: ids.length });
+    }
+
+    logger.info('Storage cleared', { cleared: ids.length - failed });
   }
 
   size(): number {
@@ -131,6 +176,7 @@ class ImageStorageService {
 
     const now = Date.now();
     let cleaned = 0;
+    let failed = 0;
 
     for (const [id, filePath] of this.imageStore.entries()) {
       try {
@@ -138,18 +184,20 @@ class ImageStorageService {
         const age = now - stats.mtimeMs;
 
         if (age > APP_CONFIG.TEMP_FILE_CLEANUP_MS) {
-          await this.delete(id);
-          cleaned++;
+          const deleted = await this.delete(id);
+          if (deleted) cleaned++;
+          else failed++;
         }
-      } catch (err) {
+      } catch (error) {
         // File doesn't exist, clean up reference
         this.imageStore.delete(id);
         this.metadataStore.delete(id);
+        cleaned++;
       }
     }
 
-    if (cleaned > 0) {
-      logger.info('Cleanup completed', { filesRemoved: cleaned });
+    if (cleaned > 0 || failed > 0) {
+      logger.info('Cleanup completed', { filesRemoved: cleaned, failed });
     }
   }
 
@@ -164,9 +212,11 @@ class ImageStorageService {
 
 export const imageStorage = new ImageStorageService();
 
-// Schedule periodic cleanup
+// Schedule periodic cleanup with error handling
 setInterval(() => {
   imageStorage.cleanup().catch((err) => {
-    logger.error('Cleanup task failed', { error: err });
+    logger.error('Cleanup task failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
   });
 }, APP_CONFIG.CLEANUP_INTERVAL_MS);

@@ -1,5 +1,5 @@
 import type { ColorPaletteResult } from '@hue-und-you/types';
-import { logger } from '../utils';
+import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '../utils';
 import { APP_CONFIG } from '../config';
 import { jobQueue, imageStorage } from '../services';
 import { extractColorsFromImage } from '../core/color/extraction/pipeline';
@@ -14,10 +14,12 @@ class AsyncProcessorService {
   private activeTimeouts = new Map<string, NodeJS.Timeout>();
 
   async processImageAsync(imageId: string, options: ProcessingOptions = {}): Promise<void> {
+    const logContext = { imageId, operation: 'async_processing' };
+
     // Set up timeout
     const timeout = setTimeout(() => {
-      logger.error('Processing timeout', {
-        imageId,
+      logger.error(new TimeoutError('image processing', APP_CONFIG.PROCESSING_TIMEOUT_MS), {
+        ...logContext,
         timeoutMs: APP_CONFIG.PROCESSING_TIMEOUT_MS,
       });
 
@@ -33,11 +35,26 @@ class AsyncProcessorService {
     this.activeTimeouts.set(imageId, timeout);
 
     try {
+      // Validate image exists
       const image = await imageStorage.get(imageId);
 
       if (!image) {
-        throw new Error('Image not found in storage');
+        throw new NotFoundError('Image', imageId);
       }
+
+      // Validate image buffer
+      if (!Buffer.isBuffer(image.buffer) || image.buffer.length === 0) {
+        throw new ImageProcessingError('Invalid image buffer', {
+          imageId,
+          bufferLength: image.buffer.length,
+        });
+      }
+
+      logger.info('Starting color extraction', {
+        imageId,
+        filename: image.filename,
+        options,
+      });
 
       // Update status to segmenting
       jobQueue.update(imageId, {
@@ -56,18 +73,24 @@ class AsyncProcessorService {
         message: 'Extracting colors...',
       });
 
-      logger.info('Starting color extraction', {
-        imageId,
-        filename: image.filename,
-        options,
-      });
-
       // Perform extraction
       const result: ColorPaletteResult = await extractColorsFromImage(
         image.buffer,
         image.filename,
-        options
+        {
+          numColors: options.numColors,
+          includeBackground: options.includeBackground ?? true,
+          generateHarmonies: options.generateHarmonies ?? true,
+        }
       );
+
+      // Validate result
+      if (!result || !result.palette || result.palette.length === 0) {
+        throw new ImageProcessingError('No colors extracted from image', {
+          imageId,
+          filename: image.filename,
+        });
+      }
 
       // Update to complete
       jobQueue.update(imageId, {
@@ -83,16 +106,32 @@ class AsyncProcessorService {
         processingTimeMs: result.metadata.processingTimeMs,
       });
     } catch (error) {
-      logger.error('Processing failed', {
-        imageId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+      const err = error instanceof Error ? error : new Error(String(error));
+
+      logger.error(err, {
+        ...logContext,
+        errorType: err.constructor.name,
       });
+
+      // Determine user-friendly error message
+      let userMessage = 'Processing failed';
+
+      if (error instanceof NotFoundError) {
+        userMessage = 'Image not found';
+      } else if (error instanceof ImageProcessingError) {
+        userMessage = error.message;
+      } else if (error instanceof TimeoutError) {
+        userMessage = 'Processing took too long';
+      } else if (err.message.includes('sharp')) {
+        userMessage = 'Failed to process image format';
+      } else if (err.message.includes('ENOENT')) {
+        userMessage = 'Image file not found';
+      }
 
       jobQueue.update(imageId, {
         status: 'error',
         progress: 0,
-        message: error instanceof Error ? error.message : 'Processing failed',
+        message: userMessage,
       });
     } finally {
       // Clear timeout
@@ -110,11 +149,22 @@ class AsyncProcessorService {
       clearTimeout(timeout);
       this.activeTimeouts.delete(imageId);
       logger.info('Processing cancelled', { imageId });
+
+      // Update job status
+      jobQueue.update(imageId, {
+        status: 'error',
+        progress: 0,
+        message: 'Processing cancelled',
+      });
     }
   }
 
   getActiveProcessingIds(): string[] {
     return Array.from(this.activeTimeouts.keys());
+  }
+
+  isProcessing(imageId: string): boolean {
+    return this.activeTimeouts.has(imageId);
   }
 }
 
