@@ -13,17 +13,9 @@ import type {
   IColorFormattingService,
   IExportService,
   IMetadataService,
-} from './interfaces';
-
-export interface ExtractionOptions {
-  numColors?: number;
-  includeBackground?: boolean;
-  generateHarmonies?: boolean;
-}
-
-export interface ExtractionHooks {
-  onPartial?: (colors: ExtractedColor[]) => void;
-}
+  ExtractionOptions,
+  ExtractionHooks,
+} from './types';
 
 /**
  * Orchestrates the color extraction pipeline using dependency-injected services.
