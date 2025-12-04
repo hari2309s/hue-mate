@@ -1,14 +1,22 @@
 import sharp from 'sharp';
 import { HF_CONFIG } from '../../config';
 import { logger } from '../../utils';
+import { SegmentationError, ExternalAPIError, withRetry } from '../../utils/errors';
 import type { ForegroundMask, SegmentResult } from '../../types/segmentation';
 import { classifySegment } from './classification';
 
-export async function segmentForegroundBackground(
-  imageBuffer: Buffer
-): Promise<ForegroundMask | null> {
+async function callHuggingFaceAPI(
+  imageBuffer: Buffer,
+  attempt: number = 1
+): Promise<SegmentResult[]> {
+  if (!HF_CONFIG.TOKEN) {
+    throw new SegmentationError('HuggingFace API key not configured', {
+      hint: 'Set HUGGINGFACE_API_KEY environment variable',
+    });
+  }
+
   try {
-    logger.info('Calling Mask2Former for foreground/background separation...');
+    logger.debug('Calling Mask2Former API', { attempt });
 
     const response = await fetch(`${HF_CONFIG.API_URL}/${HF_CONFIG.MODELS.MASK2FORMER}`, {
       method: 'POST',
@@ -17,32 +25,61 @@ export async function segmentForegroundBackground(
         'Content-Type': 'application/octet-stream',
       },
       body: new Uint8Array(imageBuffer),
+      signal: AbortSignal.timeout(60000), // 60s timeout
     });
 
     if (!response.ok) {
       if (response.status === 503) {
-        logger.warn('Model loading, waiting 20 seconds...');
-        await new Promise((r) => setTimeout(r, HF_CONFIG.RETRY_DELAY_MS));
-        return segmentForegroundBackground(imageBuffer);
+        throw new ExternalAPIError('Model is loading, please retry', 'HuggingFace', {
+          status: 503,
+          shouldRetry: true,
+        });
       }
-      const errorText = await response.text();
-      logger.error(`Mask2Former failed with status ${response.status}: ${errorText}`);
-      return null;
+
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new ExternalAPIError(`API request failed: ${response.status}`, 'HuggingFace', {
+        status: response.status,
+        error: errorText,
+      });
     }
 
     const segments = (await response.json()) as SegmentResult[];
 
-    if (!Array.isArray(segments) || segments.length === 0) {
-      return null;
+    if (!Array.isArray(segments)) {
+      throw new SegmentationError('Invalid API response format', {
+        receivedType: typeof segments,
+      });
     }
 
-    logger.success(`Received ${segments.length} segments from Mask2Former`);
-
-    const { width, height } = await sharp(imageBuffer).metadata();
-    if (!width || !height) {
-      return null;
+    return segments;
+  } catch (error) {
+    if (error instanceof ExternalAPIError || error instanceof SegmentationError) {
+      throw error;
     }
 
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ExternalAPIError('Network error connecting to HuggingFace', 'HuggingFace', {
+        originalError: error.message,
+      });
+    }
+
+    throw new SegmentationError('Unexpected error during API call', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function createMaskFromSegments(
+  segments: SegmentResult[],
+  width: number,
+  height: number
+): Promise<{ maskBuffer: Buffer; foregroundPercentage: number } | null> {
+  if (segments.length === 0) {
+    logger.warn('No segments to process');
+    return null;
+  }
+
+  try {
     const maskArray = new Uint8Array(width * height);
     let foregroundSegmentCount = 0;
 
@@ -68,8 +105,11 @@ export async function segmentForegroundBackground(
           logger.success(
             `Added ${classification} segment: ${segment.label} (score: ${segment.score.toFixed(2)})`
           );
-        } catch {
-          logger.warn(`Failed to process mask for ${segment.label}`);
+        } catch (maskError) {
+          logger.warn(`Failed to process mask for ${segment.label}`, {
+            error: maskError instanceof Error ? maskError.message : String(maskError),
+          });
+          // Continue processing other segments
         }
       }
     }
@@ -83,13 +123,7 @@ export async function segmentForegroundBackground(
     for (let i = 0; i < maskArray.length; i++) {
       if (maskArray[i] > 128) foregroundPixels++;
     }
-    const foreground_percentage = (foregroundPixels / maskArray.length) * 100;
-
-    if (foreground_percentage > 95 && foreground_percentage <= 99.5) {
-      logger.info(
-        `Large foreground detected (${foreground_percentage.toFixed(1)}%) - may be close-up or portrait`
-      );
-    }
+    const foregroundPercentage = (foregroundPixels / maskArray.length) * 100;
 
     const finalMaskBuffer = await sharp(Buffer.from(maskArray), {
       raw: { width, height, channels: 1 },
@@ -97,14 +131,81 @@ export async function segmentForegroundBackground(
       .png()
       .toBuffer();
 
-    logger.success(`Foreground: ${foreground_percentage.toFixed(1)}%`);
+    return {
+      maskBuffer: finalMaskBuffer,
+      foregroundPercentage,
+    };
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(err, { operation: 'mask_creation' });
+    throw new SegmentationError('Failed to create segmentation mask', {
+      error: err.message,
+    });
+  }
+}
+
+export async function segmentForegroundBackground(
+  imageBuffer: Buffer
+): Promise<ForegroundMask | null> {
+  try {
+    logger.info('Starting foreground/background segmentation');
+
+    // Validate input
+    if (!Buffer.isBuffer(imageBuffer) || imageBuffer.length === 0) {
+      throw new SegmentationError('Invalid image buffer', {
+        isBuffer: Buffer.isBuffer(imageBuffer),
+        length: imageBuffer.length,
+      });
+    }
+
+    // Get image dimensions
+    const metadata = await sharp(imageBuffer)
+      .metadata()
+      .catch((error) => {
+        throw new SegmentationError('Failed to read image metadata', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+    const { width, height } = metadata;
+    if (!width || !height) {
+      throw new SegmentationError('Could not determine image dimensions', { metadata });
+    }
+
+    // Call API with retry logic
+    const segments = await withRetry(() => callHuggingFaceAPI(imageBuffer), {
+      maxAttempts: 2,
+      delayMs: HF_CONFIG.RETRY_DELAY_MS,
+      backoff: false,
+      retryIf: (error) => {
+        // Only retry on 503 (model loading)
+        return error instanceof ExternalAPIError && error.context?.status === 503;
+      },
+    });
+
+    logger.success(`Received ${segments.length} segments from Mask2Former`);
+
+    // Create mask from segments
+    const result = await createMaskFromSegments(segments, width, height);
+
+    if (!result) {
+      return null;
+    }
+
+    logger.success(`Foreground: ${result.foregroundPercentage.toFixed(1)}%`);
     logger.info(
       `Detected segments: ${segments.map((s) => `${s.label}(${s.score.toFixed(2)})`).join(', ')}`
     );
 
-    return { mask: finalMaskBuffer, foreground_percentage };
+    return {
+      mask: result.maskBuffer,
+      foreground_percentage: result.foregroundPercentage,
+    };
   } catch (error) {
-    logger.error(`Mask2Former segmentation failed: ${error}`);
+    // Log but don't throw - allow fallback to continue
+    logger.error(error instanceof Error ? error : new Error(String(error)), {
+      operation: 'segmentation',
+    });
     return null;
   }
 }
