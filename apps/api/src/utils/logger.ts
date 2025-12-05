@@ -1,4 +1,4 @@
-import { AppError, isOperationalError } from './errors';
+import { AppError, isOperationalError } from '@/utils/errors';
 
 type LogLevel = 'info' | 'success' | 'warn' | 'error' | 'debug';
 
