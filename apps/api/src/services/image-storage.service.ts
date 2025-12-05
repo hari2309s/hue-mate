@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { logger } from '../utils';
-import { APP_CONFIG } from '../config';
+import { config } from '../config';
 import { StorageError } from '../utils/errors';
 
 export interface ImageData {
@@ -183,7 +183,7 @@ class ImageStorageService {
         const stats = await fs.stat(filePath);
         const age = now - stats.mtimeMs;
 
-        if (age > APP_CONFIG.TEMP_FILE_CLEANUP_MS) {
+        if (age > config.app.tempFileCleanupMs) {
           const deleted = await this.delete(id);
           if (deleted) cleaned++;
           else failed++;
@@ -219,4 +219,4 @@ setInterval(() => {
       error: err instanceof Error ? err.message : String(err),
     });
   });
-}, APP_CONFIG.CLEANUP_INTERVAL_MS);
+}, config.app.cleanupIntervalMs);

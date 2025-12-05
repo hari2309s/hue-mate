@@ -1,6 +1,6 @@
 import type { ColorPaletteResult } from '@hue-und-you/types';
 import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '../utils';
-import { APP_CONFIG } from '../config';
+import { config } from '../config';
 import { jobQueue, imageStorage } from '../services';
 import { extractColorsFromImage } from '../core/color/extraction/pipeline';
 
@@ -18,9 +18,9 @@ class AsyncProcessorService {
 
     // Set up timeout
     const timeout = setTimeout(() => {
-      logger.error(new TimeoutError('image processing', APP_CONFIG.PROCESSING_TIMEOUT_MS), {
+      logger.error(new TimeoutError('image processing', config.app.processingTimeoutMs), {
         ...logContext,
-        timeoutMs: APP_CONFIG.PROCESSING_TIMEOUT_MS,
+        timeoutMs: config.app.processingTimeoutMs,
       });
 
       jobQueue.update(imageId, {
@@ -30,7 +30,7 @@ class AsyncProcessorService {
       });
 
       this.activeTimeouts.delete(imageId);
-    }, APP_CONFIG.PROCESSING_TIMEOUT_MS);
+    }, config.app.processingTimeoutMs);
 
     this.activeTimeouts.set(imageId, timeout);
 
