@@ -1,4 +1,4 @@
-import type { ForegroundMask, PixelData } from '../../../types/segmentation';
+import type { ForegroundMask, PixelData } from '@/types/segmentation';
 import type {
   ExtractedColor,
   ExportFormats,

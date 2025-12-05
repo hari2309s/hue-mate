@@ -1,5 +1,5 @@
-import { buildExtractionMetadata } from '../metadata';
-import type { IMetadataService, SegmentationResult } from '../types';
+import { buildExtractionMetadata } from '@/core/color/extraction/metadata';
+import type { IMetadataService, SegmentationResult } from '@/core/color/extraction/types';
 import type { ExtractedColor, ExtractionMetadata } from '@hue-und-you/types';
 
 export class MetadataService implements IMetadataService {

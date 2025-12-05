@@ -8,8 +8,8 @@
  */
 
 import type { ColorPaletteResult } from '@hue-und-you/types';
-import { services } from '../../../services/container';
-import type { ExtractionOptions, ExtractionHooks } from './types';
+import { services } from '@/services/container';
+import type { ExtractionOptions, ExtractionHooks } from '@/core/color/extraction/types';
 
 /**
  * Extract colors from an image.

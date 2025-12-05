@@ -14,12 +14,12 @@
 /**
  * Main extraction function - use this for most cases
  */
-export { extractColorsFromImage } from './pipeline';
+export { extractColorsFromImage } from '@/core/color/extraction/pipeline';
 
 /**
  * Orchestrator for advanced usage with custom hooks
  */
-export { ColorExtractionOrchestrator } from './ColorExtractionOrchestrator';
+export { ColorExtractionOrchestrator } from '@/core/color/extraction/ColorExtractionOrchestrator';
 
 // ============================================================================
 // TYPES

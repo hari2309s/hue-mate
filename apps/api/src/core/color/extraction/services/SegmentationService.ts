@@ -1,11 +1,11 @@
-import { logger } from '../../../../utils';
-import { segmentForegroundBackground, segmentSemantic } from '../../../segmentation';
+import { logger } from '@/utils';
+import { segmentForegroundBackground, segmentSemantic } from '@/core/segmentation';
 import type {
   ISegmentationService,
   SegmentationResult,
   SegmentationMethod,
   SegmentationQuality,
-} from '../types';
+} from '@/core/color/extraction/types';
 
 export class SegmentationService implements ISegmentationService {
   async segment(imageBuffer: Buffer): Promise<SegmentationResult> {

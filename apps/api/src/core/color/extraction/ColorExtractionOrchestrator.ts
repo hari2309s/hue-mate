@@ -4,8 +4,8 @@ import type {
   RGBValues,
   SegmentInfo,
 } from '@hue-und-you/types';
-import { logger } from '../../../utils';
-import { config } from '../../../config';
+import { logger } from '@/utils';
+import { config } from '@/config';
 import type {
   ISegmentationService,
   IPixelExtractionService,
@@ -15,7 +15,7 @@ import type {
   IMetadataService,
   ExtractionOptions,
   ExtractionHooks,
-} from './types';
+} from '@/core/color/extraction/types';
 
 /**
  * Orchestrates the color extraction pipeline using dependency-injected services.

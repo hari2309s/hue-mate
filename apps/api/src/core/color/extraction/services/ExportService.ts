@@ -1,5 +1,5 @@
-import { generateExports } from '../../../export';
-import type { IExportService } from '../types';
+import { generateExports } from '@/core/export';
+import type { IExportService } from '@/core/color/extraction/types';
 import type { ExtractedColor, ExportFormats } from '@hue-und-you/types';
 
 export class ExportService implements IExportService {

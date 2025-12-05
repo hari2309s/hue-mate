@@ -1,14 +1,18 @@
-import { logger } from '../../../../utils';
+import { logger } from '@/utils';
 import {
   applySaturationBias,
   kMeansClusteringOklab,
   deduplicateSimilarColors,
   enforceHueDiversity,
   finalCleanup,
-} from '../../../color/clustering';
-import { rgbToOklab } from '../../../color/conversion';
-import type { PixelData } from '../../../../types/segmentation';
-import type { IClusteringService, ClusteringResult, ClusteringOptions } from '../types';
+} from '@/core/color/clustering';
+import { rgbToOklab } from '@/core/color/conversion';
+import type { PixelData } from '@/types/segmentation';
+import type {
+  IClusteringService,
+  ClusteringResult,
+  ClusteringOptions,
+} from '@/core/color/extraction/types';
 
 export class ClusteringService implements IClusteringService {
   async cluster(

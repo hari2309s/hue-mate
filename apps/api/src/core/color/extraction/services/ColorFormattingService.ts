@@ -8,8 +8,11 @@ import {
   findNearestPantone,
   generateCssVariableName,
   resetPaletteNameTracker,
-} from '../../../color';
-import type { IColorFormattingService, ColorFormattingOptions } from '../types';
+} from '@/core/color';
+import type {
+  IColorFormattingService,
+  ColorFormattingOptions,
+} from '@/core/color/extraction/types';
 
 export class ColorFormattingService implements IColorFormattingService {
   async format(
