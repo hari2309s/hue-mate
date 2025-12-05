@@ -164,40 +164,6 @@ export type ExtractionConfig = typeof config.extraction;
 export type RateLimitConfig = typeof config.rateLimit;
 
 // ============================================================================
-// LEGACY EXPORTS (backwards compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use `config.app` instead
- */
-export const APP_CONFIG = config.app;
-
-/**
- * @deprecated Use `config.huggingface` instead
- */
-export const HF_CONFIG = config.huggingface;
-
-/**
- * @deprecated Use `config.extraction.saturation` instead
- */
-export const SATURATION_CONFIG = config.extraction.saturation;
-
-/**
- * @deprecated Use `config.extraction.clustering` instead
- */
-export const CLUSTERING_CONFIG = config.extraction.clustering;
-
-/**
- * @deprecated Use `config.extraction.brightness` instead
- */
-export const BRIGHTNESS_CONFIG = config.extraction.brightness;
-
-/**
- * @deprecated Use `config.rateLimit` instead
- */
-export const RATE_LIMIT_CONFIG = config.rateLimit;
-
-// ============================================================================
 // VALIDATION ON STARTUP
 // ============================================================================
 
