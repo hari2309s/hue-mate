@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { APP_CONFIG } from '../../config';
+import { config } from '../../config';
 
 const ALLOWED_MIME_TYPES = [
   'image/png',
@@ -10,7 +10,7 @@ const ALLOWED_MIME_TYPES = [
 ] as const;
 
 // Calculate max base64 size (accounting for 33% overhead)
-const MAX_BASE64_SIZE = Math.floor((APP_CONFIG.MAX_IMAGE_SIZE_MB * 1024 * 1024 * 4) / 3);
+const MAX_BASE64_SIZE = Math.floor((config.app.maxImageSizeMB * 1024 * 1024 * 4) / 3);
 
 export const uploadImageSchema = z.object({
   filename: z
@@ -24,19 +24,19 @@ export const uploadImageSchema = z.object({
   base64Data: z
     .string()
     .min(1, 'Image data is required')
-    .max(MAX_BASE64_SIZE, `Image exceeds ${APP_CONFIG.MAX_IMAGE_SIZE_MB}MB limit`)
+    .max(MAX_BASE64_SIZE, `Image exceeds ${config.app.maxImageSizeMB}MB limit`)
     .regex(/^[A-Za-z0-9+/=]+$/, 'Invalid base64 format')
     .refine(
       (data) => {
         try {
           const sizeBytes = Buffer.byteLength(data, 'base64');
-          return sizeBytes <= APP_CONFIG.MAX_IMAGE_SIZE_MB * 1024 * 1024;
+          return sizeBytes <= config.app.maxImageSizeMB * 1024 * 1024;
         } catch {
           return false;
         }
       },
       {
-        message: `Decoded image exceeds ${APP_CONFIG.MAX_IMAGE_SIZE_MB}MB`,
+        message: `Decoded image exceeds ${config.app.maxImageSizeMB}MB`,
       }
     ),
 });

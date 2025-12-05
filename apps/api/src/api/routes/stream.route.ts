@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { imageStorage, jobQueue } from '../../services';
 import { extractColorsFromImage } from '../../core/color/extraction/pipeline';
 import { logger, TimeoutError, ImageProcessingError } from '../../utils';
-import { APP_CONFIG } from '../../config';
+import { config } from '../../config';
 
 const router = Router();
 
@@ -69,7 +69,7 @@ router.get('/:imageId', async (req: Request, res: Response) => {
           });
         }
       }
-    }, APP_CONFIG.PROCESSING_TIMEOUT_MS);
+    }, config.app.processingTimeoutMs);
 
     try {
       // Parse query parameters
