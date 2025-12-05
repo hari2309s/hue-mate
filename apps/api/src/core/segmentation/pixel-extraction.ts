@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { APP_CONFIG, BRIGHTNESS_CONFIG } from '../../config';
+import { config } from '../../config';
 import { logger } from '../../utils';
 import type { ForegroundMask, ExtractedPixels, PixelData } from '../../types/segmentation';
 
@@ -32,11 +32,11 @@ export async function extractPixels(
   const totalPixels = info.width * info.height;
 
   // DETERMINISTIC sampling: always use the same rate and pattern
-  const sampleRate = Math.max(1, Math.floor(totalPixels / APP_CONFIG.MAX_SAMPLES));
+  const sampleRate = Math.max(1, Math.floor(totalPixels / config.app.maxSamples));
 
   logger.success('Sampling configuration', {
     totalPixels,
-    maxSamples: APP_CONFIG.MAX_SAMPLES,
+    maxSamples: config.app.maxSamples,
     sampleRate,
     deterministic: true,
   });
@@ -51,8 +51,8 @@ export async function extractPixels(
 
     // Apply consistent brightness filter
     if (
-      brightness > BRIGHTNESS_CONFIG.MIN_BRIGHTNESS &&
-      brightness < BRIGHTNESS_CONFIG.MAX_BRIGHTNESS
+      brightness > config.extraction.brightness.min &&
+      brightness < config.extraction.brightness.max
     ) {
       pixels.push({ r, g, b });
 

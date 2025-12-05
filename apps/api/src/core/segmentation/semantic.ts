@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { HF_CONFIG } from '../../config';
+import { config } from '../../config';
 import { logger } from '../../utils';
 import type { SegmentResult } from '../../types/segmentation';
 
@@ -7,9 +7,9 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
   try {
     logger.info('=== SEMANTIC SEGMENTATION START ===');
     logger.info(`Original image buffer size: ${imageBuffer.length} bytes`);
-    logger.info(`HF Token present: ${!!HF_CONFIG.TOKEN}`);
+    logger.info(`HF Token present: ${!!config.huggingface.token}`);
 
-    if (!HF_CONFIG.TOKEN) {
+    if (!config.huggingface.token) {
       logger.error('CRITICAL: HF_TOKEN is not set!');
       return [];
     }
@@ -25,14 +25,17 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
     logger.info(`Resized buffer size: ${resizedBuffer.length} bytes`);
     const requestStart = Date.now();
 
-    const response = await fetch(`${HF_CONFIG.API_URL}/${HF_CONFIG.MODELS.SEGFORMER}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${HF_CONFIG.TOKEN}`,
-        'Content-Type': 'application/octet-stream',
-      },
-      body: new Uint8Array(resizedBuffer),
-    });
+    const response = await fetch(
+      `${config.huggingface.apiUrl}/${config.huggingface.models.segformer}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.huggingface.token}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: new Uint8Array(resizedBuffer),
+      }
+    );
 
     const requestDuration = Date.now() - requestStart;
     logger.info(`Request completed in ${requestDuration}ms`);
@@ -46,7 +49,7 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
 
       if (response.status === 503) {
         logger.warn('Model loading (503 status), waiting 20 seconds...');
-        await new Promise((r) => setTimeout(r, HF_CONFIG.RETRY_DELAY_MS));
+        await new Promise((r) => setTimeout(r, config.huggingface.retryDelayMs));
         logger.info('Retrying after model load wait...');
         return segmentSemantic(imageBuffer);
       }

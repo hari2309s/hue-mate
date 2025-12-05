@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { HF_CONFIG } from '../../config';
+import { config } from '../../config';
 import { logger } from '../../utils';
 import { SegmentationError, ExternalAPIError, withRetry } from '../../utils/errors';
 import type { ForegroundMask, SegmentResult } from '../../types/segmentation';
@@ -9,7 +9,7 @@ async function callHuggingFaceAPI(
   imageBuffer: Buffer,
   attempt: number = 1
 ): Promise<SegmentResult[]> {
-  if (!HF_CONFIG.TOKEN) {
+  if (!config.huggingface.token) {
     throw new SegmentationError('HuggingFace API key not configured', {
       hint: 'Set HUGGINGFACE_API_KEY environment variable',
     });
@@ -18,15 +18,18 @@ async function callHuggingFaceAPI(
   try {
     logger.debug('Calling Mask2Former API', { attempt });
 
-    const response = await fetch(`${HF_CONFIG.API_URL}/${HF_CONFIG.MODELS.MASK2FORMER}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${HF_CONFIG.TOKEN}`,
-        'Content-Type': 'application/octet-stream',
-      },
-      body: new Uint8Array(imageBuffer),
-      signal: AbortSignal.timeout(60000), // 60s timeout
-    });
+    const response = await fetch(
+      `${config.huggingface.apiUrl}/${config.huggingface.models.mask2former}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.huggingface.token}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: new Uint8Array(imageBuffer),
+        signal: AbortSignal.timeout(60000), // 60s timeout
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 503) {
@@ -175,7 +178,7 @@ export async function segmentForegroundBackground(
     // Call API with retry logic
     const segments = await withRetry(() => callHuggingFaceAPI(imageBuffer), {
       maxAttempts: 2,
-      delayMs: HF_CONFIG.RETRY_DELAY_MS,
+      delayMs: config.huggingface.retryDelayMs,
       backoff: false,
       retryIf: (error) => {
         // Only retry on 503 (model loading)
