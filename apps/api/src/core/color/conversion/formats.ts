@@ -7,7 +7,7 @@ import type {
   LCHValues,
   ColorFormats,
 } from '@hue-und-you/types';
-import { rgbToOklab, oklabToOklch } from './oklab';
+import { rgbToOklab, oklabToOklch } from '@/core/color/conversion';
 
 export function rgbToHex(r: number, g: number, b: number): string {
   return (

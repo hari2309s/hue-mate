@@ -1,5 +1,5 @@
 import type { RGBValues, OKLCHValues } from '@hue-und-you/types';
-import type { OklabColor } from '../../../types/segmentation';
+import type { OklabColor } from '@/types/segmentation';
 
 export function rgbToOklab(r: number, g: number, b: number): OklabColor {
   const linearize = (c: number) => {

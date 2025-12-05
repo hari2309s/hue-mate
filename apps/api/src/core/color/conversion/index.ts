@@ -1,2 +1,2 @@
-export * from './oklab';
-export * from './formats';
+export * from '@/core/color/conversion/oklab';
+export * from '@/core/color/conversion/formats';
