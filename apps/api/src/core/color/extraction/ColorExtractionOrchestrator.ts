@@ -5,7 +5,7 @@ import type {
   SegmentInfo,
 } from '@hue-und-you/types';
 import { logger } from '../../../utils';
-import { APP_CONFIG } from '../../../config';
+import { config } from '../../../config';
 import type {
   ISegmentationService,
   IPixelExtractionService,
@@ -132,15 +132,15 @@ export class ColorExtractionOrchestrator {
       palette.push(color);
 
       // Send partial results
-      if (!partialSent && palette.length >= APP_CONFIG.PARTIAL_COLOR_COUNT) {
-        hooks.onPartial?.(palette.slice(0, APP_CONFIG.PARTIAL_COLOR_COUNT));
+      if (!partialSent && palette.length >= config.app.partialColorCount) {
+        hooks.onPartial?.(palette.slice(0, config.app.partialColorCount));
         partialSent = true;
       }
     }
 
     // Ensure at least one partial was sent
     if (!partialSent && palette.length > 0) {
-      hooks.onPartial?.(palette.slice(0, Math.min(APP_CONFIG.PARTIAL_COLOR_COUNT, palette.length)));
+      hooks.onPartial?.(palette.slice(0, Math.min(config.app.partialColorCount, palette.length)));
     }
 
     return palette;
