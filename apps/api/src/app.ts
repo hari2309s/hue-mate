@@ -6,13 +6,13 @@ import { TRPCError } from '@trpc/server';
 import { appRouter } from './api/trpc/router';
 import streamRoute from './api/routes/stream.route';
 import { logger } from './utils';
-import { RATE_LIMIT_CONFIG } from './config';
+import { config } from './config';
 import { AppError, RateLimitError, getUserMessage, isOperationalError } from './utils/errors';
 
 // Rate limiters
 const uploadLimiter = rateLimit({
-  windowMs: RATE_LIMIT_CONFIG.UPLOAD_WINDOW_MS,
-  max: RATE_LIMIT_CONFIG.UPLOAD_MAX_REQUESTS,
+  windowMs: config.rateLimit.upload.windowMs,
+  max: config.rateLimit.upload.maxRequests,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -31,8 +31,8 @@ const uploadLimiter = rateLimit({
 });
 
 const processLimiter = rateLimit({
-  windowMs: RATE_LIMIT_CONFIG.PROCESS_WINDOW_MS,
-  max: RATE_LIMIT_CONFIG.PROCESS_MAX_REQUESTS,
+  windowMs: config.rateLimit.process.windowMs,
+  max: config.rateLimit.process.maxRequests,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
