@@ -6,7 +6,7 @@ import { TRPCError } from '@trpc/server';
 import { appRouter } from '@/api/trpc/router';
 import streamRoute from '@/api/routes/stream.route';
 import { logger } from '@/utils';
-import { config } from '@/config';
+import { config } from '@hue-und-you/color-engine';
 import { AppError, RateLimitError, getUserMessage, isOperationalError } from '@/utils/errors';
 
 // Rate limiters

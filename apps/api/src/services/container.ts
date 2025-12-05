@@ -21,9 +21,8 @@ import {
   ColorFormattingService,
   ExportService,
   MetadataService,
-} from '@/core/color/extraction/services';
-
-import { ColorExtractionOrchestrator } from '@/core/color/extraction/ColorExtractionOrchestrator';
+  ColorExtractionOrchestrator,
+} from '@hue-und-you/color-engine';
 
 import type {
   ISegmentationService,
@@ -32,7 +31,7 @@ import type {
   IColorFormattingService,
   IExportService,
   IMetadataService,
-} from '@/core/color/extraction/types';
+} from '@hue-und-you/color-engine';
 
 // ============================================================================
 // SERVICE CONTAINER

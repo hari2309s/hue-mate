@@ -1,7 +1,11 @@
 import 'dotenv/config';
 import { createApp } from '@/app';
-import { config, validateConfig, printConfigSummary } from '@/config';
-import { logger } from '@/utils';
+import {
+  config,
+  validateConfig,
+  printConfigSummary,
+  logger,
+} from '@hue-und-you/color-engine';
 import { imageStorage } from '@/services';
 
 async function startServer() {
@@ -10,7 +14,7 @@ async function startServer() {
 
   if (!validation.valid) {
     logger.warn('Configuration validation warnings:');
-    validation.errors.forEach((error) => logger.warn(`  - ${error}`));
+    validation.errors.forEach((error: string) => logger.warn(`  - ${error}`));
   }
 
   // Print config summary in development
@@ -22,7 +26,7 @@ async function startServer() {
   try {
     await imageStorage.initialize();
     logger.success('Services initialized');
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error('Failed to initialize services', { error: err });
     process.exit(1);
   }
@@ -79,7 +83,7 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
+startServer().catch((err: unknown) => {
   logger.error('Failed to start server', { error: err });
   process.exit(1);
 });

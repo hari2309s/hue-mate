@@ -1,8 +1,13 @@
 import type { ColorPaletteResult } from '@hue-und-you/types';
-import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '@/utils';
-import { config } from '@/config';
+import {
+  logger,
+  TimeoutError,
+  ImageProcessingError,
+  NotFoundError,
+  config,
+} from '@hue-und-you/color-engine';
 import { jobQueue, imageStorage } from '@/services';
-import { extractColorsFromImage } from '@/core/color/extraction/pipeline';
+import { extractColorsFromImage } from '@hue-und-you/color-engine';
 
 export interface ProcessingOptions {
   numColors?: number;
@@ -105,7 +110,7 @@ class AsyncProcessorService {
         colorsExtracted: result.palette.length,
         processingTimeMs: result.metadata.processingTimeMs,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
 
       logger.error(err, {

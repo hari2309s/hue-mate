@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "echo 'Config package does not need building'",
-    "clean": "echo 'Config package has no build output'",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -rf dist",
     "type-check": "tsc --noEmit"
   },
   "keywords": [],
@@ -13,16 +14,17 @@
   "license": "ISC",
   "packageManager": "pnpm@10.22.0",
   "type": "module",
-  "types": "./dist/index.d.ts",
   "exports": {
-    "\"": {
-      "/typescript/base\"": "./src/typescript/base.json",
-      "/typescript/node\"": "./src/typescript/node.json",
-      "/typescript/lib\"": "./src/typescript/lib.json",
-      "/typescript/react\"": "./src/typescript/react.json",
-      "/eslint\"": "./src/eslint.js",
-      "/tailwind\"": "./src/tailwind.ts"
-    }
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tailwind": "./src/tailwind.ts",
+    "./eslint": "./src/eslint.js",
+    "./typescript/base": "./src/typescript/base.json",
+    "./typescript/node": "./src/typescript/node.json",
+    "./typescript/lib": "./src/typescript/lib.json",
+    "./typescript/react": "./src/typescript/react.json"
   },
   "devDependencies": {
     "@types/eslint": "^9.6.1",

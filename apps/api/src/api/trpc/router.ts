@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { TRPCError } from '@trpc/server';
 import { router, publicProcedure } from '@hue-und-you/api-schema';
+import { logger, NotFoundError, ValidationError, StorageError } from '@hue-und-you/color-engine';
 import { imageStorage, jobQueue, asyncProcessor } from '@/services';
-import { logger, NotFoundError, ValidationError, StorageError } from '@/utils';
 import { uploadImageSchema, processImageSchema, getResultSchema } from '@/api/validation/schemas';
 
 export const appRouter = router({
@@ -56,7 +56,7 @@ export const appRouter = router({
         imageId,
         message: 'Image uploaded successfully',
       };
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(error instanceof Error ? error : new Error(String(error)), {
         context: 'upload_image',
         imageId,
@@ -173,7 +173,7 @@ export const appRouter = router({
         progress: job.progress,
         message: job.message,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(error instanceof Error ? error : new Error(String(error)), {
         context: 'get_status',
         imageId: input.imageId,
@@ -205,7 +205,7 @@ export const appRouter = router({
       });
 
       return job.result ?? null;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(error instanceof Error ? error : new Error(String(error)), {
         context: 'get_result',
         imageId: input.imageId,

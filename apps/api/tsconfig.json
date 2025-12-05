@@ -7,13 +7,22 @@
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@hue-und-you/color-engine": [
+        "../../packages/color-engine/dist/index.d.ts",
+        "../../packages/color-engine/dist/index.js"
+      ],
+      "@hue-und-you/color-engine/*": [
+        "../../packages/color-engine/dist/*"
+      ]
     }
   },
   "references": [
     { "path": "../../packages/types" },
     { "path": "../../packages/db" },
-    { "path": "../../packages/api-schema" }
+    { "path": "../../packages/api-schema" },
+    { "path": "../../packages/color-engine" },
+    { "path": "../../packages/ml-segmentation" }
   ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
