@@ -1,6 +1,6 @@
-import type { PixelData, PixelWithWeight, PixelWithOklab } from '../../../types/segmentation';
-import { rgbToOklab, oklabToOklch, oklchToRgb } from '../conversion';
-import { config } from '../../../config';
+import type { PixelData, PixelWithWeight, PixelWithOklab } from '@/types/segmentation';
+import { rgbToOklab, oklabToOklch, oklchToRgb } from '@/core/color/conversion';
+import { config } from '@/config';
 
 // Seeded random number generator (LCG algorithm)
 class SeededRandom {

@@ -1,6 +1,6 @@
-import type { PixelWithWeight } from '../../../types/segmentation';
-import { rgbToHsl } from '../conversion';
-import { config } from '../../../config';
+import type { PixelWithWeight } from '@/types/segmentation';
+import { rgbToHsl } from '@/core/color/conversion';
+import { config } from '@/config';
 
 export function enforceHueDiversity(
   colors: PixelWithWeight[],
