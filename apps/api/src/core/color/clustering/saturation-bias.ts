@@ -1,6 +1,6 @@
 import type { PixelData } from '../../../types/segmentation';
 import { rgbToHsl } from '../conversion';
-import { SATURATION_CONFIG } from '../../../config';
+import { config } from '../../../config';
 
 export function applySaturationBias(pixels: PixelData[]): PixelData[] {
   const biased: PixelData[] = [];
@@ -9,25 +9,28 @@ export function applySaturationBias(pixels: PixelData[]): PixelData[] {
     const hsl = rgbToHsl(pixel.r, pixel.g, pixel.b);
     const saturation = hsl.s;
 
-    let saturationBoost = SATURATION_CONFIG.NEUTRAL_BOOST;
+    let saturationBoost = config.extraction.saturation.neutralBoost;
 
-    if (saturation > SATURATION_CONFIG.HIGH_THRESHOLD) {
+    if (saturation > config.extraction.saturation.highThreshold) {
       saturationBoost =
-        Math.pow(saturation / 100, SATURATION_CONFIG.HIGH_POWER) * SATURATION_CONFIG.HIGH_BOOST;
-    } else if (saturation > SATURATION_CONFIG.MEDIUM_THRESHOLD) {
+        Math.pow(saturation / 100, config.extraction.saturation.highPower) *
+        config.extraction.saturation.highBoost;
+    } else if (saturation > config.extraction.saturation.mediumThreshold) {
       saturationBoost =
-        Math.pow(saturation / 100, SATURATION_CONFIG.MEDIUM_POWER) * SATURATION_CONFIG.MEDIUM_BOOST;
-    } else if (saturation > SATURATION_CONFIG.LOW_THRESHOLD) {
+        Math.pow(saturation / 100, config.extraction.saturation.mediumPower) *
+        config.extraction.saturation.mediumBoost;
+    } else if (saturation > config.extraction.saturation.lowThreshold) {
       saturationBoost =
-        Math.pow(saturation / 100, SATURATION_CONFIG.LOW_POWER) * SATURATION_CONFIG.LOW_BOOST;
+        Math.pow(saturation / 100, config.extraction.saturation.lowPower) *
+        config.extraction.saturation.lowBoost;
     }
 
     const lightness = hsl.l;
     if (
-      lightness >= SATURATION_CONFIG.OPTIMAL_LIGHTNESS_MIN &&
-      lightness <= SATURATION_CONFIG.OPTIMAL_LIGHTNESS_MAX
+      lightness >= config.extraction.saturation.optimalLightnessMin &&
+      lightness <= config.extraction.saturation.optimalLightnessMax
     ) {
-      saturationBoost *= SATURATION_CONFIG.LIGHTNESS_BOOST;
+      saturationBoost *= config.extraction.saturation.lightnessBoost;
     }
 
     const repetitions = Math.max(1, Math.min(20, Math.round(saturationBoost)));

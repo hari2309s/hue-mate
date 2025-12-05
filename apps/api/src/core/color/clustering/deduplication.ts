@@ -1,7 +1,7 @@
 import type { PixelWithWeight, OklabColor } from '../../../types/segmentation';
 import { rgbToOklab, rgbToHsl } from '../conversion';
 import type { HSLValues } from '@hue-und-you/types';
-import { CLUSTERING_CONFIG } from '../../../config';
+import { config } from '../../../config';
 
 interface ColorWithCache {
   r: number;
@@ -14,7 +14,7 @@ interface ColorWithCache {
 
 export function deduplicateSimilarColors(
   colors: PixelWithWeight[],
-  minDistance: number = CLUSTERING_CONFIG.DEDUPLICATION_THRESHOLD
+  minDistance: number = config.extraction.clustering.deduplicationThreshold
 ): PixelWithWeight[] {
   if (colors.length === 0) return [];
 
@@ -123,7 +123,7 @@ export function finalCleanup(colors: PixelWithWeight[]): PixelWithWeight[] {
       const db = color.oklab.b - existing.oklab.b;
       const dist = Math.sqrt(dl * dl * 2 + da * da * 8 + db * db * 8);
 
-      if (dist < CLUSTERING_CONFIG.PERCEPTUAL_DISTANCE_THRESHOLD) {
+      if (dist < config.extraction.clustering.perceptualDistanceThreshold) {
         keepColor = false;
         mergeIndex = j;
         break;
