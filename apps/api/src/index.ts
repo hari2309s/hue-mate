@@ -1,10 +1,23 @@
 import 'dotenv/config';
 import { createApp } from './app';
-import { APP_CONFIG, HF_CONFIG } from './config';
+import { config, validateConfig, printConfigSummary } from './config';
 import { logger } from './utils';
 import { imageStorage } from './services';
 
 async function startServer() {
+  // Validate configuration
+  const validation = validateConfig();
+
+  if (!validation.valid) {
+    logger.warn('Configuration validation warnings:');
+    validation.errors.forEach((error) => logger.warn(`  - ${error}`));
+  }
+
+  // Print config summary in development
+  if (config.app.isDevelopment) {
+    printConfigSummary();
+  }
+
   // Initialize storage
   try {
     await imageStorage.initialize();
@@ -16,19 +29,19 @@ async function startServer() {
 
   // Log environment check
   logger.info('Environment configuration', {
-    port: APP_CONFIG.PORT,
-    nodeEnv: APP_CONFIG.NODE_ENV,
-    maxImageSizeMB: APP_CONFIG.MAX_IMAGE_SIZE_MB,
-    processingTimeoutMs: APP_CONFIG.PROCESSING_TIMEOUT_MS,
-    hfApiKeySet: !!HF_CONFIG.TOKEN,
-    databaseUrlSet: !!process.env.DATABASE_URL,
+    port: config.app.port,
+    nodeEnv: config.app.nodeEnv,
+    maxImageSizeMB: config.app.maxImageSizeMB,
+    processingTimeoutMs: config.app.processingTimeoutMs,
+    hfApiKeySet: !!config.huggingface.token,
+    databaseUrlSet: !!config.database.url,
   });
 
   const app = createApp();
 
-  app.listen(APP_CONFIG.PORT, () => {
+  app.listen(config.app.port, () => {
     logger.success('API server started', {
-      url: `http://localhost:${APP_CONFIG.PORT}`,
+      url: `http://localhost:${config.app.port}`,
       endpoints: {
         health: '/health',
         trpc: '/trpc',
