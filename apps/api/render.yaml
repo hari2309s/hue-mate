@@ -4,7 +4,17 @@ services:
     runtime: node
     region: frankfurt
     plan: starter
-    buildCommand: 'pnpm install && pnpm --filter "@hue-und-you/types" build && pnpm --filter "@hue-und-you/config" build && pnpm --filter "@hue-und-you/ml-segmentation" build && pnpm --filter "@hue-und-you/color-engine" build && pnpm --filter "@hue-und-you/db" build && pnpm --filter "@hue-und-you/api-schema" build && pnpm --filter "@hue-und-you/api" build'
+    buildCommand: |
+      pnpm install && \
+      pnpm --filter "@hue-und-you/types" build && \
+      pnpm --filter "@hue-und-you/config" build && \
+      pnpm --filter "@hue-und-you/ml-segmentation" build && \
+      pnpm --filter "@hue-und-you/color-engine" build && \
+      pnpm --filter "@hue-und-you/db" build && \
+      pnpm --filter "@hue-und-you/api-schema" build && \
+      cd apps/api && \
+      pnpm exec tsc --build && \
+      pnpm exec tsc-alias -p tsconfig.json
     startCommand: 'cd apps/api && node dist/index.js'
     envVars:
       - key: NODE_ENV
@@ -13,9 +23,5 @@ services:
         value: 10000
       - key: HUGGINGFACE_API_KEY
         sync: false
-      - key: OLLAMA_CLOUD_API_KEY
-        sync: false
-      - key: OLLAMA_CLOUD_API_URL
-        value: https://api.ollama.cloud/v1
     healthCheckPath: /health
     autoDeploy: true
