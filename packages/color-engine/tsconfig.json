@@ -1,0 +1,19 @@
+{
+  "extends": "../config/src/typescript/library.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["./*"],
+      "@hue-und-you/ml-segmentation": ["../ml-segmentation/src/index.ts"],
+      "@hue-und-you/ml-segmentation/*": ["../ml-segmentation/src/*"],
+      "@hue-und-you/config": ["../config/src/index.ts"],
+      "@hue-und-you/config/*": ["../config/src/*"]
+    }
+  },
+  "references": [{ "path": "../ml-segmentation" }, { "path": "../config" }],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+

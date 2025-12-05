@@ -1,0 +1,37 @@
+{
+  "name": "@hue-und-you/color-engine",
+  "version": "1.0.0",
+  "description": "Core color processing engine for hue-und-you",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build && tsc-alias -p tsconfig.json",
+    "clean": "tsc --build --clean && rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "dependencies": {
+    "@hue-und-you/config": "workspace:*",
+    "@hue-und-you/ml-segmentation": "workspace:*",
+    "color-namer": "^1.4.0",
+    "nearest-pantone": "^1.0.1",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@10.22.0"
+}
+
