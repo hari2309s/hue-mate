@@ -267,26 +267,3 @@ export const services = ServiceContainer.getInstance();
  * Service container class (for testing)
  */
 export { ServiceContainer };
-
-// ============================================================================
-// LEGACY EXPORTS (backwards compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use `services.orchestrator` instead
- */
-export const colorExtractionOrchestrator = services.orchestrator;
-
-/**
- * @deprecated Use `services.orchestrator` directly or `new ColorExtractionOrchestrator(...)`
- */
-export function createColorExtractionOrchestrator(): ColorExtractionOrchestrator {
-  return new ColorExtractionOrchestrator(
-    new SegmentationService(),
-    new PixelExtractionService(),
-    new ClusteringService(),
-    new ColorFormattingService(),
-    new ExportService(),
-    new MetadataService()
-  );
-}
