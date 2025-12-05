@@ -5,10 +5,10 @@
     "outDir": "./dist",
     "composite": true,
     "noEmit": false,
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "types": ["node"],
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./*"],
       "@hue-und-you/color-engine": [
         "../../packages/color-engine/dist/index.d.ts",
         "../../packages/color-engine/dist/index.js"
@@ -27,6 +27,11 @@
   "exclude": ["node_modules", "dist"],
   "tsc-alias": {
     "resolveFullPaths": true,
-    "verbose": true
+    "verbose": true,
+    "replacers": {
+      "exampleReplacer": {
+        "enabled": false
+      }
+    }
   }
 }
