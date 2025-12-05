@@ -9,11 +9,8 @@
     "types": ["node"],
     "paths": {
       "@/*": ["./*"],
-      "@hue-und-you/color-engine": [
-        "../../packages/color-engine/dist/index.d.ts",
-        "../../packages/color-engine/dist/index.js"
-      ],
-      "@hue-und-you/color-engine/*": ["../../packages/color-engine/dist/*"]
+      "@hue-und-you/color-engine": ["../../packages/color-engine/src/index.ts"],
+      "@hue-und-you/color-engine/*": ["../../packages/color-engine/src/*"]
     }
   },
   "references": [
@@ -25,13 +22,8 @@
   ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
-  "tsc-alias": {
-    "resolveFullPaths": true,
-    "verbose": true,
-    "replacers": {
-      "exampleReplacer": {
-        "enabled": false
-      }
-    }
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   }
 }

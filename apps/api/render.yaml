@@ -12,9 +12,7 @@ services:
       pnpm --filter "@hue-und-you/color-engine" build && \
       pnpm --filter "@hue-und-you/db" build && \
       pnpm --filter "@hue-und-you/api-schema" build && \
-      cd apps/api && \
-      pnpm exec tsc --build && \
-      pnpm exec tsc-alias -p tsconfig.json
+      pnpm --filter "@hue-und-you/api" build
     startCommand: 'cd apps/api && node dist/index.js'
     envVars:
       - key: NODE_ENV
