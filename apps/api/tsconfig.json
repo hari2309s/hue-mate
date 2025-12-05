@@ -6,15 +6,14 @@
     "composite": true,
     "noEmit": false,
     "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "@/*": ["src/*"],
       "@hue-und-you/color-engine": [
         "../../packages/color-engine/dist/index.d.ts",
         "../../packages/color-engine/dist/index.js"
       ],
-      "@hue-und-you/color-engine/*": [
-        "../../packages/color-engine/dist/*"
-      ]
+      "@hue-und-you/color-engine/*": ["../../packages/color-engine/dist/*"]
     }
   },
   "references": [

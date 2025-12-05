@@ -4,6 +4,9 @@ export * from './types/segmentation';
 export * from './core';
 export * from './services';
 
+// Explicit exports for config
+export { config, validateConfig, printConfigSummary } from './config';
+
 export {
   SegmentationService,
   PixelExtractionService,
@@ -22,4 +25,3 @@ export type {
   IExportService,
   IMetadataService,
 } from './core/color/extraction/types';
-

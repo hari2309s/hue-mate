@@ -4,7 +4,7 @@ services:
     runtime: node
     region: frankfurt
     plan: starter
-    buildCommand: 'corepack enable && pnpm install && pnpm build --filter=@hue-und-you/api'
+    buildCommand: 'corepack enable && pnpm install && pnpm --filter "@hue-und-you/api" build'
     startCommand: 'cd apps/api && node dist/index.js'
     envVars:
       - key: NODE_ENV
