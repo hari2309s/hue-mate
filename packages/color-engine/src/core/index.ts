@@ -10,7 +10,7 @@ export {
   classifySegment,
   FOREGROUND_LABELS,
   AMBIGUOUS_LABELS,
-} from '../../../ml-segmentation/src/segmentation';
+} from '@hue-und-you/ml-segmentation';
 
 // ============================================================================
 // COLOR PROCESSING

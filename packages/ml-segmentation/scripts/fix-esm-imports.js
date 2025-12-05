@@ -35,6 +35,13 @@ function resolveImport(importPath, fromFile) {
   const fromDir = dirname(fromFile);
   const targetPath = join(fromDir, importPath);
   
+  // Skip imports that go outside the dist directory (these are workspace package imports)
+  // This handles workspace package imports that tsc-alias resolved to source paths
+  // Also skip if the path contains '/src/' as it's pointing to source files in other packages
+  if (!targetPath.startsWith(distDir) || importPath.includes('/src/')) {
+    return null; // Goes outside dist directory or references source files, don't modify it
+  }
+  
   // Check if it's a file with .js extension
   const jsFile = targetPath + '.js';
   try {

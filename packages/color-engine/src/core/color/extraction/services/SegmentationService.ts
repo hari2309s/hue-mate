@@ -2,7 +2,7 @@ import { logger } from '@/utils';
 import {
   segmentForegroundBackground,
   segmentSemantic,
-} from '../../../../../../ml-segmentation/src/segmentation';
+} from '@hue-und-you/ml-segmentation';
 import type {
   ISegmentationService,
   SegmentationResult,
