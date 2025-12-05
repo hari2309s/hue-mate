@@ -16,7 +16,21 @@ async function callHuggingFaceAPI(
   }
 
   try {
-    logger.debug('Calling Mask2Former API', { attempt });
+    logger.debug('Calling Mask2Former API', { 
+      attempt,
+      imageSize: imageBuffer.length,
+      apiUrl: `${config.huggingface.apiUrl}/${config.huggingface.models.mask2former}`,
+    });
+
+    // Use model-specific timeout, fallback to default
+    const timeoutMs =
+      config.huggingface.modelTimeouts?.mask2former || config.huggingface.requestTimeoutMs;
+
+    logger.debug('Mask2Former API timeout configuration', {
+      timeoutMs,
+      modelTimeout: config.huggingface.modelTimeouts?.mask2former,
+      defaultTimeout: config.huggingface.requestTimeoutMs,
+    });
 
     const response = await fetch(
       `${config.huggingface.apiUrl}/${config.huggingface.models.mask2former}`,
@@ -27,9 +41,15 @@ async function callHuggingFaceAPI(
           'Content-Type': 'application/octet-stream',
         },
         body: new Uint8Array(imageBuffer),
-        signal: AbortSignal.timeout(60000), // 60s timeout
+        signal: AbortSignal.timeout(timeoutMs),
       }
     );
+
+    logger.debug('Received response from Mask2Former API', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+    });
 
     if (!response.ok) {
       if (response.status === 503) {
@@ -40,17 +60,32 @@ async function callHuggingFaceAPI(
       }
 
       const errorText = await response.text().catch(() => 'Unknown error');
+      logger.warn('HuggingFace API returned error status', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText.substring(0, 500), // Limit error text length
+      });
       throw new ExternalAPIError(`API request failed: ${response.status}`, 'HuggingFace', {
         status: response.status,
-        error: errorText,
+        statusText: response.statusText,
+        error: errorText.substring(0, 500),
       });
     }
 
     const segments = (await response.json()) as SegmentResult[];
 
+    logger.debug('Parsed segments from API response', {
+      segmentCount: Array.isArray(segments) ? segments.length : 0,
+    });
+
     if (!Array.isArray(segments)) {
+      logger.error('Invalid API response format', {
+        receivedType: typeof segments,
+        receivedValue: JSON.stringify(segments).substring(0, 200),
+      });
       throw new SegmentationError('Invalid API response format', {
         receivedType: typeof segments,
+        receivedValue: JSON.stringify(segments).substring(0, 200),
       });
     }
 
@@ -66,9 +101,31 @@ async function callHuggingFaceAPI(
       });
     }
 
-    throw new SegmentationError('Unexpected error during API call', {
+    // Capture more details about the unexpected error
+    const errorDetails: Record<string, unknown> = {
       error: error instanceof Error ? error.message : String(error),
-    });
+    };
+
+    if (error instanceof Error) {
+      errorDetails.name = error.name;
+      errorDetails.stack = error.stack;
+      // Check for common error types
+      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+        errorDetails.type = 'timeout';
+        const timeoutMs =
+          config.huggingface.modelTimeouts?.mask2former || config.huggingface.requestTimeoutMs;
+        errorDetails.hint = `The request timed out after ${timeoutMs / 1000} seconds`;
+        errorDetails.timeoutMs = timeoutMs;
+      } else if (error.message.includes('fetch')) {
+        errorDetails.type = 'network';
+        errorDetails.hint = 'Network error connecting to HuggingFace API';
+      } else if (error.message.includes('JSON')) {
+        errorDetails.type = 'parse';
+        errorDetails.hint = 'Failed to parse API response';
+      }
+    }
+
+    throw new SegmentationError('Unexpected error during API call', errorDetails);
   }
 }
 
@@ -205,10 +262,33 @@ export async function segmentForegroundBackground(
       foreground_percentage: result.foregroundPercentage,
     };
   } catch (error) {
-    // Log but don't throw - allow fallback to continue
-    logger.error(error instanceof Error ? error : new Error(String(error)), {
+    // Log detailed error information for debugging
+    const errorDetails: Record<string, unknown> = {
       operation: 'segmentation',
-    });
+      method: 'foreground-background',
+    };
+
+    if (error instanceof SegmentationError) {
+      errorDetails.message = error.message;
+      errorDetails.context = error.context;
+      errorDetails.stack = error.stack;
+    } else if (error instanceof ExternalAPIError) {
+      errorDetails.message = error.message;
+      errorDetails.service = error.service;
+      errorDetails.context = error.context;
+      errorDetails.stack = error.stack;
+    } else if (error instanceof Error) {
+      errorDetails.message = error.message;
+      errorDetails.name = error.name;
+      errorDetails.stack = error.stack;
+    } else {
+      errorDetails.error = String(error);
+    }
+
+    logger.error(
+      error instanceof Error ? error : new Error(String(error)),
+      errorDetails
+    );
     return null;
   }
 }

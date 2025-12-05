@@ -23,6 +23,17 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
       .toBuffer();
 
     logger.info(`Resized buffer size: ${resizedBuffer.length} bytes`);
+    
+    // Use model-specific timeout, fallback to default
+    const timeoutMs =
+      config.huggingface.modelTimeouts?.segformer || config.huggingface.requestTimeoutMs;
+    
+    logger.debug('SegFormer API timeout configuration', {
+      timeoutMs,
+      modelTimeout: config.huggingface.modelTimeouts?.segformer,
+      defaultTimeout: config.huggingface.requestTimeoutMs,
+    });
+    
     const requestStart = Date.now();
 
     const response = await fetch(
@@ -34,6 +45,7 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
           'Content-Type': 'application/octet-stream',
         },
         body: new Uint8Array(resizedBuffer),
+        signal: AbortSignal.timeout(timeoutMs),
       }
     );
 

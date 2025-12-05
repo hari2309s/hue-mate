@@ -47,7 +47,11 @@ export const config = {
       segformer: 'nvidia/segformer-b0-finetuned-ade-512-512',
     },
     retryDelayMs: 20000,
-    requestTimeoutMs: 60000,
+    requestTimeoutMs: 60000, // Default timeout (fallback)
+    modelTimeouts: {
+      mask2former: getEnvNumber('HF_MASK2FORMER_TIMEOUT_MS', 120000), // 120s for Mask2Former (slower model)
+      segformer: getEnvNumber('HF_SEGFORMER_TIMEOUT_MS', 60000), // 60s for SegFormer (faster model)
+    },
   },
   extraction: {
     saturation: {
@@ -124,6 +128,17 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
     errors.push('clustering.convergenceEpsilon must be positive');
   }
 
+  // Validate timeout values
+  if (config.huggingface.modelTimeouts.mask2former < 1000) {
+    errors.push('HF_MASK2FORMER_TIMEOUT_MS must be at least 1000ms');
+  }
+  if (config.huggingface.modelTimeouts.segformer < 1000) {
+    errors.push('HF_SEGFORMER_TIMEOUT_MS must be at least 1000ms');
+  }
+  if (config.huggingface.requestTimeoutMs < 1000) {
+    errors.push('requestTimeoutMs must be at least 1000ms');
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -137,6 +152,11 @@ export function printConfigSummary(): void {
   console.log(`Port: ${config.app.port}`);
   console.log(`Max Image Size: ${config.app.maxImageSizeMB}MB`);
   console.log(`HuggingFace API: ${config.huggingface.token ? '✓ Configured' : '✗ Missing'}`);
+  if (config.huggingface.token) {
+    console.log(`  Mask2Former Timeout: ${config.huggingface.modelTimeouts.mask2former / 1000}s`);
+    console.log(`  SegFormer Timeout: ${config.huggingface.modelTimeouts.segformer / 1000}s`);
+    console.log(`  Default Timeout: ${config.huggingface.requestTimeoutMs / 1000}s`);
+  }
   console.log(`Database: ${config.database.url ? '✓ Configured' : '✗ Missing'}`);
   console.log(`Log Level: ${config.logging.level}`);
   console.log('========================\n');
