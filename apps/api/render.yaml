@@ -4,7 +4,7 @@ services:
     runtime: node
     region: frankfurt
     plan: starter
-    buildCommand: 'corepack enable && pnpm install && pnpm --filter "@hue-und-you/types" build && pnpm --filter "@hue-und-you/config" build && pnpm --filter "@hue-und-you/ml-segmentation" build && pnpm --filter "@hue-und-you/color-engine" build && pnpm --filter "@hue-und-you/db" build && pnpm --filter "@hue-und-you/api-schema" build && pnpm --filter "@hue-und-you/api" build'
+    buildCommand: 'npm i -g pnpm@10.24.0 && pnpm install && pnpm --filter "@hue-und-you/types" build && pnpm --filter "@hue-und-you/config" build && pnpm --filter "@hue-und-you/ml-segmentation" build && pnpm --filter "@hue-und-you/color-engine" build && pnpm --filter "@hue-und-you/db" build && pnpm --filter "@hue-und-you/api-schema" build && pnpm --filter "@hue-und-you/api" build'
     startCommand: 'cd apps/api && node dist/index.js'
     envVars:
       - key: NODE_ENV
