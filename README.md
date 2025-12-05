@@ -47,7 +47,9 @@ hue-und-you/
 │   ├── api-schema/       # Shared tRPC router & Zod schemas
 │   ├── types/            # Centralized TypeScript types
 │   ├── db/               # Drizzle ORM schemas (PostgreSQL)
-│   └── config/           # Shared configs (Tailwind, TypeScript, ESLint)
+│   ├── config/           # Shared configs + env-validated app config
+│   ├── color-engine/     # Core color pipeline (clustering, naming, exports)
+│   └── ml-segmentation/  # ML + luminance segmentation services
 └── scripts/              # Build & cleanup utilities
 ```
 
@@ -148,7 +150,7 @@ Returns newline-delimited JSON with partial results and final palette. Useful fo
 ## 🎨 Color Extraction Pipeline
 
 ### Entry Point
-`apps/api/src/services/colorExtraction.ts` (stage-based architecture)
+`@hue-und-you/color-engine` (stage-based architecture, consumed by API)
 
 ### Stage 1: Segmentation
 - **Foreground/Background**: Mask2Former (COCO panoptic) → label classification
