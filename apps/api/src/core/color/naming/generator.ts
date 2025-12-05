@@ -1,5 +1,5 @@
 import type { RGBValues, HSLValues } from '@hue-und-you/types';
-import { rgbToHsl } from '../conversion';
+import { rgbToHsl } from '@/core/color/conversion';
 import {
   NEUTRAL_THRESHOLD,
   EARTH_SAT_THRESHOLD,
@@ -8,8 +8,8 @@ import {
   getHuePalette,
   getToneBucket,
   type ToneBucket,
-} from './palettes';
-import { getPaletteTracker } from './palette-tracker';
+} from '@/core/color/naming/palettes';
+import { getPaletteTracker } from '@/core/color/naming/palette-tracker';
 
 function sanitizeColorName(name: string): string {
   // Remove any potentially harmful characters (security fix #12)

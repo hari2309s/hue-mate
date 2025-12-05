@@ -1,6 +1,6 @@
 import type { RGBValues, AccessibilityInfo } from '@hue-und-you/types';
-import { contrastRatio, buildContrastResult } from './contrast';
-import { calculateAPCA } from './apca';
+import { contrastRatio, buildContrastResult } from '@/core/color/accessibility/contrast';
+import { calculateAPCA } from '@/core/color/accessibility/apca';
 
 export function buildAccessibilityInfo(rgb: RGBValues): AccessibilityInfo {
   const white: RGBValues = { r: 255, g: 255, b: 255 };
@@ -29,5 +29,5 @@ export function buildAccessibilityInfo(rgb: RGBValues): AccessibilityInfo {
   };
 }
 
-export { contrastRatio, buildContrastResult } from './contrast';
-export { calculateAPCA } from './apca';
+export { contrastRatio, buildContrastResult } from '@/core/color/accessibility/contrast';
+export { calculateAPCA } from '@/core/color/accessibility/apca';

@@ -1,4 +1,4 @@
-import type { PaletteToneMap, ToneBucket } from './palettes';
+import type { PaletteToneMap, ToneBucket } from '@/core/color/naming/palettes';
 
 export class PaletteNameTracker {
   private usedBaseNames = new Set<string>();

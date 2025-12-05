@@ -10,7 +10,7 @@ export {
   rgbToLab,
   labToLch,
   buildColorFormats,
-} from './conversion';
+} from '@/core/color/conversion';
 
 // Clustering exports
 export {
@@ -19,7 +19,7 @@ export {
   deduplicateSimilarColors,
   finalCleanup,
   enforceHueDiversity,
-} from './clustering';
+} from '@/core/color/clustering';
 
 // Naming exports
 export {
@@ -28,7 +28,7 @@ export {
   findNearestPantone,
   resetPaletteNameTracker,
   getPaletteTracker,
-} from './naming';
+} from '@/core/color/naming';
 
 // Accessibility exports
 export {
@@ -36,7 +36,7 @@ export {
   contrastRatio,
   buildContrastResult,
   calculateAPCA,
-} from './accessibility';
+} from '@/core/color/accessibility';
 
 // Harmony exports
 export {
@@ -44,4 +44,4 @@ export {
   generateShades,
   generateTintsAndShades,
   generateHarmonies,
-} from './harmony';
+} from '@/core/color/harmony';

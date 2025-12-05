@@ -1,4 +1,4 @@
-export { generateColorName, generateCssVariableName } from './generator';
-export { findNearestPantone } from './pantone';
-export { resetPaletteNameTracker, getPaletteTracker } from './palette-tracker';
-export type { PaletteToneMap, ToneBucket, HuePalette } from './palettes';
+export { generateColorName, generateCssVariableName } from '@/core/color/naming/generator';
+export { findNearestPantone } from '@/core/color/naming/pantone';
+export { resetPaletteNameTracker, getPaletteTracker } from '@/core/color/naming/palette-tracker';
+export type { PaletteToneMap, ToneBucket, HuePalette } from '@/core/color/naming/palettes';
