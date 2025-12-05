@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { config } from '../../config';
+import { config } from '@/config';
 
 const ALLOWED_MIME_TYPES = [
   'image/png',

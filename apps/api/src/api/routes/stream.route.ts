@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { imageStorage, jobQueue } from '../../services';
-import { extractColorsFromImage } from '../../core/color/extraction/pipeline';
-import { logger, TimeoutError, ImageProcessingError } from '../../utils';
-import { config } from '../../config';
+import { imageStorage, jobQueue } from '@/services';
+import { extractColorsFromImage } from '@/core/color/extraction/pipeline';
+import { logger, TimeoutError, ImageProcessingError } from '@/utils';
+import { config } from '@/config';
 
 const router = Router();
 

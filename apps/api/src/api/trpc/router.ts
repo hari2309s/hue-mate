@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
 import { TRPCError } from '@trpc/server';
 import { router, publicProcedure } from '@hue-und-you/api-schema';
-import { imageStorage, jobQueue, asyncProcessor } from '../../services';
-import { logger, NotFoundError, ValidationError, StorageError } from '../../utils';
-import { uploadImageSchema, processImageSchema, getResultSchema } from '../validation/schemas';
+import { imageStorage, jobQueue, asyncProcessor } from '@/services';
+import { logger, NotFoundError, ValidationError, StorageError } from '@/utils';
+import { uploadImageSchema, processImageSchema, getResultSchema } from '@/api/validation/schemas';
 
 export const appRouter = router({
   health: publicProcedure.query(() => {
