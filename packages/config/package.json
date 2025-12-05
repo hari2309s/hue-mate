@@ -5,7 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc --build && node scripts/fix-esm-imports.js",
+    "build": "tsc --build && node ../../scripts/fix-build-imports.js",
     "clean": "tsc --build --clean && rm -rf dist",
     "type-check": "tsc --noEmit"
   },
