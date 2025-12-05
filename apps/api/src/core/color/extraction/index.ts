@@ -21,11 +21,6 @@ export { extractColorsFromImage } from './pipeline';
  */
 export { ColorExtractionOrchestrator } from './ColorExtractionOrchestrator';
 
-/**
- * Factory function and singleton instance
- */
-export { createColorExtractionOrchestrator, colorExtractionOrchestrator } from './factory';
-
 // ============================================================================
 // TYPES
 // ============================================================================
