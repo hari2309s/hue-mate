@@ -10,7 +10,7 @@ export {
   classifySegment,
   FOREGROUND_LABELS,
   AMBIGUOUS_LABELS,
-} from './segmentation';
+} from '@/core/segmentation';
 
 // ============================================================================
 // COLOR PROCESSING
@@ -45,7 +45,7 @@ export {
   generateShades,
   generateTintsAndShades,
   generateHarmonies,
-} from './color';
+} from '@/core/color';
 
 // ============================================================================
 // EXPORT FORMATS
@@ -60,16 +60,16 @@ export {
   generateSwiftCode,
   generateKotlinCode,
   generateJsonExport,
-} from './export';
+} from '@/core/export';
 
 // ============================================================================
 // EXTRACTION PIPELINE
 // ============================================================================
 
-export { extractColorsFromImage, buildExtractionMetadata } from './color/extraction';
+export { extractColorsFromImage, buildExtractionMetadata } from '@/core/color/extraction';
 
 export type {
   ExtractionOptions,
   ExtractionHooks,
   SegmentationResultData,
-} from './color/extraction';
+} from '@/core/color/extraction';

@@ -1,5 +1,5 @@
 import type { ExtractedColor } from '@hue-und-you/types';
-import { deduplicateColors, buildColorScale } from './utils';
+import { deduplicateColors, buildColorScale } from '@/core/export/utils';
 
 export function generateJsonExport(palette: ExtractedColor[]): string {
   const deduplicated = deduplicateColors(palette);

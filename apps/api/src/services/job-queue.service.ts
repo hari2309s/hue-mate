@@ -1,5 +1,5 @@
 import type { UploadStatus, ColorPaletteResult } from '@hue-und-you/types';
-import { logger } from '../utils';
+import { logger } from '@/utils';
 
 export interface JobData {
   status: UploadStatus;

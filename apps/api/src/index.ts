@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { createApp } from './app';
-import { config, validateConfig, printConfigSummary } from './config';
-import { logger } from './utils';
-import { imageStorage } from './services';
+import { createApp } from '@/app';
+import { config, validateConfig, printConfigSummary } from '@/config';
+import { logger } from '@/utils';
+import { imageStorage } from '@/services';
 
 async function startServer() {
   // Validate configuration

@@ -1,5 +1,5 @@
 import type { ExtractedColor } from '@hue-und-you/types';
-import { deduplicateColors } from './utils';
+import { deduplicateColors } from '@/core/export/utils';
 
 export function generateSwiftCode(palette: ExtractedColor[]): string {
   const deduplicated = deduplicateColors(palette);

@@ -1,7 +1,7 @@
 import sharp from 'sharp';
-import { config } from '../../config';
-import { logger } from '../../utils';
-import type { SegmentResult } from '../../types/segmentation';
+import { config } from '@/config';
+import { logger } from '@/utils';
+import type { SegmentResult } from '@/types/segmentation';
 
 export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResult[]> {
   try {

@@ -1,9 +1,9 @@
 import sharp from 'sharp';
-import { config } from '../../config';
-import { logger } from '../../utils';
-import { SegmentationError, ExternalAPIError, withRetry } from '../../utils/errors';
-import type { ForegroundMask, SegmentResult } from '../../types/segmentation';
-import { classifySegment } from './classification';
+import { config } from '@/config';
+import { logger } from '@/utils';
+import { SegmentationError, ExternalAPIError, withRetry } from '@/utils/errors';
+import type { ForegroundMask, SegmentResult } from '@/types/segmentation';
+import { classifySegment } from '@/core/segmentation/classification';
 
 async function callHuggingFaceAPI(
   imageBuffer: Buffer,

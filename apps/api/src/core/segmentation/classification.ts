@@ -1,4 +1,4 @@
-import type { SegmentResult } from '../../types/segmentation';
+import type { SegmentResult } from '@/types/segmentation';
 
 /**
  * Semantic segmentation classification system

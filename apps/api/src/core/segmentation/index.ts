@@ -1,5 +1,9 @@
-export { segmentForegroundBackground } from './foreground-background';
-export { segmentSemantic } from './semantic';
-export { extractPixels } from './pixel-extraction';
-export { splitPixelsByLuminance } from './fallback';
-export { classifySegment, FOREGROUND_LABELS, AMBIGUOUS_LABELS } from './classification';
+export { segmentForegroundBackground } from '@/core/segmentation/foreground-background';
+export { segmentSemantic } from '@/core/segmentation/semantic';
+export { extractPixels } from '@/core/segmentation/pixel-extraction';
+export { splitPixelsByLuminance } from '@/core/segmentation/fallback';
+export {
+  classifySegment,
+  FOREGROUND_LABELS,
+  AMBIGUOUS_LABELS,
+} from '@/core/segmentation/classification';

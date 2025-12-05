@@ -21,9 +21,9 @@ import {
   ColorFormattingService,
   ExportService,
   MetadataService,
-} from '../core/color/extraction/services';
+} from '@/core/color/extraction/services';
 
-import { ColorExtractionOrchestrator } from '../core/color/extraction/ColorExtractionOrchestrator';
+import { ColorExtractionOrchestrator } from '@/core/color/extraction/ColorExtractionOrchestrator';
 
 import type {
   ISegmentationService,
@@ -32,7 +32,7 @@ import type {
   IColorFormattingService,
   IExportService,
   IMetadataService,
-} from '../core/color/extraction/types';
+} from '@/core/color/extraction/types';
 
 // ============================================================================
 // SERVICE CONTAINER

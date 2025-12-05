@@ -1,9 +1,9 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { logger } from '../utils';
-import { config } from '../config';
-import { StorageError } from '../utils/errors';
+import { logger } from '@/utils';
+import { config } from '@/config';
+import { StorageError } from '@/utils/errors';
 
 export interface ImageData {
   buffer: Buffer;

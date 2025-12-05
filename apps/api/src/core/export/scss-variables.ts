@@ -1,5 +1,5 @@
 import type { ExtractedColor } from '@hue-und-you/types';
-import { deduplicateColors, buildColorScale, CSS_SCALE_STEPS } from './utils';
+import { deduplicateColors, buildColorScale, CSS_SCALE_STEPS } from '@/core/export/utils';
 
 export function generateScssVariables(palette: ExtractedColor[]): string {
   const deduplicated = deduplicateColors(palette);

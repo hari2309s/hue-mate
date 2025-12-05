@@ -1,8 +1,8 @@
 import type { ColorPaletteResult } from '@hue-und-you/types';
-import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '../utils';
-import { config } from '../config';
-import { jobQueue, imageStorage } from '../services';
-import { extractColorsFromImage } from '../core/color/extraction/pipeline';
+import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '@/utils';
+import { config } from '@/config';
+import { jobQueue, imageStorage } from '@/services';
+import { extractColorsFromImage } from '@/core/color/extraction/pipeline';
 
 export interface ProcessingOptions {
   numColors?: number;

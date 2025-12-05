@@ -1,7 +1,7 @@
 import sharp from 'sharp';
-import { config } from '../../config';
-import { logger } from '../../utils';
-import type { ForegroundMask, ExtractedPixels, PixelData } from '../../types/segmentation';
+import { config } from '@/config';
+import { logger } from '@/utils';
+import type { ForegroundMask, ExtractedPixels, PixelData } from '@/types/segmentation';
 
 export async function extractPixels(
   imageBuffer: Buffer,

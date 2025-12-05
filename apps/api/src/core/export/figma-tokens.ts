@@ -1,5 +1,5 @@
 import type { ExtractedColor } from '@hue-und-you/types';
-import { deduplicateColors } from './utils';
+import { deduplicateColors } from '@/core/export/utils';
 
 export function generateFigmaTokens(palette: ExtractedColor[]): object {
   const deduplicated = deduplicateColors(palette);

@@ -1,10 +1,10 @@
 import type { ExtractedColor, ExportFormats } from '@hue-und-you/types';
-import { generateCssVariables } from './css-variables';
-import { generateScssVariables } from './scss-variables';
-import { generateTailwindConfig } from './tailwind-config';
-import { generateFigmaTokens } from './figma-tokens';
-import { generateSwiftCode } from './swift';
-import { generateKotlinCode } from './kotlin';
+import { generateCssVariables } from '@/core/export/css-variables';
+import { generateScssVariables } from '@/core/export/scss-variables';
+import { generateTailwindConfig } from '@/core/export/tailwind-config';
+import { generateFigmaTokens } from '@/core/export/figma-tokens';
+import { generateSwiftCode } from '@/core/export/swift';
+import { generateKotlinCode } from '@/core/export/kotlin';
 
 export function generateExports(palette: ExtractedColor[]): ExportFormats {
   return {

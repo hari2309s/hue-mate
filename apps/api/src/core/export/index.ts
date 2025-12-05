@@ -1,8 +1,8 @@
-export { generateExports } from './generator';
-export { generateCssVariables } from './css-variables';
-export { generateScssVariables } from './scss-variables';
-export { generateTailwindConfig } from './tailwind-config';
-export { generateFigmaTokens } from './figma-tokens';
-export { generateSwiftCode } from './swift';
-export { generateKotlinCode } from './kotlin';
-export { generateJsonExport } from './json';
+export { generateExports } from '@/core/export/generator';
+export { generateCssVariables } from '@/core/export/css-variables';
+export { generateScssVariables } from '@/core/export/scss-variables';
+export { generateTailwindConfig } from '@/core/export/tailwind-config';
+export { generateFigmaTokens } from '@/core/export/figma-tokens';
+export { generateSwiftCode } from '@/core/export/swift';
+export { generateKotlinCode } from '@/core/export/kotlin';
+export { generateJsonExport } from '@/core/export/json';
