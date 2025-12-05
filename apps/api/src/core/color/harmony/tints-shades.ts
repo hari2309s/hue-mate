@@ -1,5 +1,5 @@
 import type { OKLCHValues, TintShade } from '@hue-und-you/types';
-import { oklchToRgb, rgbToHex } from '../conversion';
+import { oklchToRgb, rgbToHex } from '@/core/color/conversion';
 
 export function generateTints(
   oklch: OKLCHValues,

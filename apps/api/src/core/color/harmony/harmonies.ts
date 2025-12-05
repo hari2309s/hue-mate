@@ -1,5 +1,5 @@
 import type { OKLCHValues, ColorHarmony, HarmonyColor } from '@hue-und-you/types';
-import { oklchToRgb, rgbToHex } from '../conversion';
+import { oklchToRgb, rgbToHex } from '@/core/color/conversion';
 
 function rotateHue(h: number, deg: number): number {
   return (h + deg + 360) % 360;
