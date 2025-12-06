@@ -6,14 +6,29 @@
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"],
+      "@/conversion": ["./conversion"],
+      "@/clustering": ["./clustering"],
+      "@/naming": ["./naming"],
+      "@/accessibility": ["./accessibility"],
+      "@/harmony": ["./harmony"],
+      "@/formatting": ["./formatting"],
+      "@/export": ["./export"],
+      "@/extraction": ["./extraction"],
+      "@/types/*": ["./types/*"],
       "@hue-und-you/ml-segmentation": ["../ml-segmentation/src/index.ts"],
       "@hue-und-you/ml-segmentation/*": ["../ml-segmentation/src/*"],
       "@hue-und-you/config": ["../config/src/index.ts"],
-      "@hue-und-you/config/*": ["../config/src/*"]
+      "@hue-und-you/config/*": ["../config/src/*"],
+      "@hue-und-you/utils": ["../utils/src/index.ts"],
+      "@hue-und-you/utils/*": ["../utils/src/*"]
     }
   },
-  "references": [{ "path": "../ml-segmentation" }, { "path": "../config" }],
+  "references": [
+    { "path": "../ml-segmentation" },
+    { "path": "../config" },
+    { "path": "../utils" },
+    { "path": "../types" }
+  ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
-
