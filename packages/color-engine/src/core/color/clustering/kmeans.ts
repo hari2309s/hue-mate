@@ -36,60 +36,102 @@ function generateSeed(pixels: PixelWithOklab[]): number {
   return Math.abs(hash);
 }
 
+// Optimized distance calculation using typed arrays
+function calculateDistance(
+  l1: number,
+  a1: number,
+  b1: number,
+  l2: number,
+  a2: number,
+  b2: number
+): number {
+  const dl = l1 - l2;
+  const da = a1 - a2;
+  const db = b1 - b2;
+  return Math.sqrt(dl * dl + da * da + db * db);
+}
+
+// K-means++ initialization with performance optimizations
 function kMeansPlusPlus(pixels: PixelWithOklab[], k: number, rng: SeededRandom): PixelWithOklab[] {
   const centroids: PixelWithOklab[] = [];
+  const n = pixels.length;
+
+  // Use typed arrays for better performance
+  const distances = new Float32Array(n);
 
   // First centroid: pick deterministically from middle of array
-  const firstIndex = Math.floor(pixels.length / 2);
+  const firstIndex = Math.floor(n / 2);
   centroids.push({ ...pixels[firstIndex] });
 
   for (let i = 1; i < k; i++) {
-    const distances = pixels.map((pixel) => {
-      const minDist = Math.min(
-        ...centroids.map((c) => {
-          const dl = pixel.oklab.l - c.oklab.l;
-          const da = pixel.oklab.a - c.oklab.a;
-          const db = pixel.oklab.b - c.oklab.b;
-          return Math.sqrt(dl * dl + da * da * 4 + db * db * 4);
-        })
-      );
-      return minDist * minDist * minDist;
-    });
+    let totalDist = 0;
 
-    const totalDist = distances.reduce((sum, d) => sum + d, 0);
+    // Calculate minimum distances to existing centroids
+    for (let j = 0; j < n; j++) {
+      const pixel = pixels[j];
+      let minDist = Infinity;
+
+      // Find minimum distance to any existing centroid
+      for (const c of centroids) {
+        const dist = calculateDistance(
+          pixel.oklab.l,
+          pixel.oklab.a,
+          pixel.oklab.b,
+          c.oklab.l,
+          c.oklab.a,
+          c.oklab.b
+        );
+        if (dist < minDist) minDist = dist;
+      }
+
+      // Store squared distance cubed for weighted selection
+      const weightedDist = minDist * minDist * minDist;
+      distances[j] = weightedDist;
+      totalDist += weightedDist;
+    }
+
+    // Weighted random selection
     let threshold = rng.next() * totalDist;
+    let selectedIndex = 0;
 
-    for (let j = 0; j < pixels.length; j++) {
+    for (let j = 0; j < n; j++) {
       threshold -= distances[j];
       if (threshold <= 0) {
-        centroids.push({ ...pixels[j] });
+        selectedIndex = j;
         break;
       }
     }
 
-    // Fallback if loop completes without selection
-    if (centroids.length === i) {
-      const fallbackIndex = rng.nextInt(0, pixels.length);
-      centroids.push({ ...pixels[fallbackIndex] });
-    }
+    centroids.push({ ...pixels[selectedIndex] });
   }
 
   return centroids;
 }
 
+// Optimized K-means clustering with early termination
 export function kMeansClusteringOklab(
   pixels: PixelData[],
   k: number,
   maxIterations: number = config.extraction.clustering.maxIterations
 ): PixelWithWeight[] {
   if (pixels.length === 0) return [];
-  if (pixels.length <= k) return pixels.map((p) => ({ ...p, weight: 1 / pixels.length }));
+  if (pixels.length <= k) {
+    return pixels.map((p) => ({ ...p, weight: 1 / pixels.length }));
+  }
 
-  // Convert to OKLab
-  const oklabPixels: PixelWithOklab[] = pixels.map((p) => ({
-    ...p,
-    oklab: rgbToOklab(p.r, p.g, p.b),
-  }));
+  const n = pixels.length;
+
+  // Pre-convert all pixels to OKLab once (caching)
+  const oklabPixels: PixelWithOklab[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const p = pixels[i];
+    oklabPixels[i] = {
+      r: p.r,
+      g: p.g,
+      b: p.b,
+      oklab: rgbToOklab(p.r, p.g, p.b),
+    };
+  }
 
   // Create deterministic RNG from pixel data
   const seed = generateSeed(oklabPixels);
@@ -97,92 +139,132 @@ export function kMeansClusteringOklab(
 
   // Initialize centroids deterministically
   let centroids = kMeansPlusPlus(oklabPixels, k, rng);
+
+  // Use typed arrays for cluster assignments
+  const assignments = new Uint16Array(n);
+  const clusterSizes = new Uint32Array(k);
+
   let converged = false;
   let iteration = 0;
+  let lastChange = Infinity;
 
   while (!converged && iteration < maxIterations) {
     iteration++;
 
+    // Reset cluster sizes
+    clusterSizes.fill(0);
+
     // Assign pixels to nearest centroid
-    const clusters: PixelWithOklab[][] = Array.from({ length: k }, () => []);
-
-    for (const pixel of oklabPixels) {
+    let changes = 0;
+    for (let i = 0; i < n; i++) {
+      const pixel = oklabPixels[i];
       let minDist = Infinity;
       let closest = 0;
 
-      for (let i = 0; i < k; i++) {
-        const dl = pixel.oklab.l - centroids[i].oklab.l;
-        const da = pixel.oklab.a - centroids[i].oklab.a;
-        const db = pixel.oklab.b - centroids[i].oklab.b;
-        const dist = Math.sqrt(dl * dl + da * da + db * db);
-
-        if (dist < minDist) {
-          minDist = dist;
-          closest = i;
-        }
-      }
-      clusters[closest].push(pixel);
-    }
-
-    // Compute new centroids
-    const newCentroids = clusters.map((cluster, i) => {
-      if (cluster.length === 0) return centroids[i];
-
-      const avgOklab = {
-        l: cluster.reduce((sum, p) => sum + p.oklab.l, 0) / cluster.length,
-        a: cluster.reduce((sum, p) => sum + p.oklab.a, 0) / cluster.length,
-        b: cluster.reduce((sum, p) => sum + p.oklab.b, 0) / cluster.length,
-      };
-
-      const oklch = oklabToOklch(avgOklab);
-      const rgb = oklchToRgb(oklch);
-
-      return { ...rgb, oklab: avgOklab };
-    });
-
-    // Check convergence
-    converged = centroids.every(
-      (c, i) =>
-        Math.abs(c.oklab.l - newCentroids[i].oklab.l) <
-          config.extraction.clustering.convergenceEpsilon &&
-        Math.abs(c.oklab.a - newCentroids[i].oklab.a) <
-          config.extraction.clustering.convergenceEpsilon &&
-        Math.abs(c.oklab.b - newCentroids[i].oklab.b) <
-          config.extraction.clustering.convergenceEpsilon
-    );
-
-    centroids = newCentroids;
-  }
-
-  // Calculate final cluster sizes
-  const clusterSizes = centroids.map((_, i) => {
-    return oklabPixels.filter((pixel) => {
-      let minDist = Infinity;
-      let closest = 0;
-
-      for (let j = 0; j < centroids.length; j++) {
-        const dl = pixel.oklab.l - centroids[j].oklab.l;
-        const da = pixel.oklab.a - centroids[j].oklab.a;
-        const db = pixel.oklab.b - centroids[j].oklab.b;
-        const dist = Math.sqrt(dl * dl + da * da + db * db);
+      for (let j = 0; j < k; j++) {
+        const dist = calculateDistance(
+          pixel.oklab.l,
+          pixel.oklab.a,
+          pixel.oklab.b,
+          centroids[j].oklab.l,
+          centroids[j].oklab.a,
+          centroids[j].oklab.b
+        );
 
         if (dist < minDist) {
           minDist = dist;
           closest = j;
         }
       }
-      return closest === i;
-    }).length;
-  });
 
+      if (assignments[i] !== closest) {
+        changes++;
+        assignments[i] = closest;
+      }
+      clusterSizes[closest]++;
+    }
+
+    // Early termination if very few changes
+    if (changes < n * 0.001) {
+      converged = true;
+      break;
+    }
+
+    // Diminishing returns check
+    if (changes >= lastChange * 0.99) {
+      converged = true;
+      break;
+    }
+    lastChange = changes;
+
+    // Compute new centroids using accumulated sums
+    const sumL = new Float64Array(k);
+    const sumA = new Float64Array(k);
+    const sumB = new Float64Array(k);
+
+    for (let i = 0; i < n; i++) {
+      const cluster = assignments[i];
+      const pixel = oklabPixels[i];
+      sumL[cluster] += pixel.oklab.l;
+      sumA[cluster] += pixel.oklab.a;
+      sumB[cluster] += pixel.oklab.b;
+    }
+
+    // Update centroids
+    let maxCentroidShift = 0;
+    for (let j = 0; j < k; j++) {
+      if (clusterSizes[j] === 0) continue;
+
+      const count = clusterSizes[j];
+      const newL = sumL[j] / count;
+      const newA = sumA[j] / count;
+      const newB = sumB[j] / count;
+
+      // Calculate centroid shift for convergence check
+      const shift =
+        Math.abs(newL - centroids[j].oklab.l) +
+        Math.abs(newA - centroids[j].oklab.a) +
+        Math.abs(newB - centroids[j].oklab.b);
+
+      if (shift > maxCentroidShift) {
+        maxCentroidShift = shift;
+      }
+
+      const oklch = oklabToOklch({ l: newL, a: newA, b: newB });
+      const rgb = oklchToRgb(oklch);
+
+      centroids[j] = {
+        r: rgb.r,
+        g: rgb.g,
+        b: rgb.b,
+        oklab: { l: newL, a: newA, b: newB },
+      };
+    }
+
+    // Check convergence based on centroid movement
+    if (maxCentroidShift < config.extraction.clustering.convergenceEpsilon) {
+      converged = true;
+    }
+  }
+
+  // Calculate final weights
   const totalPixels = pixels.length;
+  const result: PixelWithWeight[] = [];
 
-  return centroids
-    .map((c, i) => ({
-      r: c.r,
-      g: c.g,
-      b: c.b,
-      weight: clusterSizes[i] / totalPixels,
-    }))
-    .sort((a, b) => b.weight - a.weight);
+  for (let j = 0; j < k; j++) {
+    const size = clusterSizes[j];
+    if (size > 0) {
+      result.push({
+        r: centroids[j].r,
+        g: centroids[j].g,
+        b: centroids[j].b,
+        weight: size / totalPixels,
+      });
+    }
+  }
+
+  // Sort by weight (descending)
+  result.sort((a, b) => b.weight - a.weight);
+
+  return result;
 }
