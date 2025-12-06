@@ -1,0 +1,146 @@
+import type { ExtractedColor, ExportFormats } from '@hue-und-you/types';
+import { deduplicateColors, buildColorScale, CSS_SCALE_STEPS } from './utils';
+
+export function generateCssVariables(palette: ExtractedColor[]): string {
+  const deduplicated = deduplicateColors(palette);
+
+  const cssVars = deduplicated
+    .map((c) => {
+      const scale = buildColorScale(c);
+      const varName = c.metadata.css_variable_name;
+      const lines = [`  ${varName}: var(${varName}-500);`];
+      CSS_SCALE_STEPS.forEach((step) => {
+        lines.push(`  ${varName}-${step}: ${scale[step]};`);
+      });
+      return lines.join('\n');
+    })
+    .join('\n\n');
+
+  return `:root {\n${cssVars}\n}`;
+}
+
+export function generateScssVariables(palette: ExtractedColor[]): string {
+  const deduplicated = deduplicateColors(palette);
+
+  return deduplicated
+    .map((c) => {
+      const name = c.name.toLowerCase().replace(/\s+/g, '-');
+      const scale = buildColorScale(c);
+      const lines = [`$${name}: ${scale['500']};`];
+      CSS_SCALE_STEPS.forEach((step) => lines.push(`$${name}-${step}: ${scale[step]};`));
+      return lines.join('\n');
+    })
+    .join('\n\n');
+}
+
+export function generateTailwindConfig(palette: ExtractedColor[]): object {
+  const deduplicated = deduplicateColors(palette);
+  const colors: Record<string, Record<string, string>> = {};
+
+  deduplicated.forEach((c) => {
+    const name = c.name.toLowerCase().replace(/\s+/g, '-');
+    const scale = buildColorScale(c);
+    colors[name] = CSS_SCALE_STEPS.reduce(
+      (acc, step) => {
+        acc[step] = scale[step];
+        return acc;
+      },
+      { DEFAULT: scale['500'] } as Record<string, string>
+    );
+  });
+
+  return { theme: { extend: { colors } } };
+}
+
+export function generateFigmaTokens(palette: ExtractedColor[]): object {
+  const deduplicated = deduplicateColors(palette);
+  const tokens: Record<string, object> = {};
+
+  deduplicated.forEach((c) => {
+    const name = c.name.toLowerCase().replace(/\s+/g, '-');
+    tokens[name] = {
+      value: c.formats.hex,
+      type: 'color',
+      description: `${c.name} - ${c.metadata.temperature} tone`,
+    };
+  });
+
+  return { tokens };
+}
+
+export function generateSwiftCode(palette: ExtractedColor[]): string {
+  const deduplicated = deduplicateColors(palette);
+  const lines = ['import SwiftUI', '', 'extension Color {'];
+
+  deduplicated.forEach((c) => {
+    const name = c.name.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+    const { r, g, b } = c.formats.rgb.values;
+    lines.push(
+      `    static let ${name} = Color(red: ${(r / 255).toFixed(3)}, green: ${(g / 255).toFixed(3)}, blue: ${(b / 255).toFixed(3)})`
+    );
+  });
+
+  lines.push('}');
+  return lines.join('\n');
+}
+
+export function generateKotlinCode(palette: ExtractedColor[]): string {
+  const deduplicated = deduplicateColors(palette);
+  const lines = ['import androidx.compose.ui.graphics.Color', '', 'object AppColors {'];
+
+  deduplicated.forEach((c) => {
+    const name = c.name.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+    lines.push(`    val ${name} = Color(0xFF${c.formats.hex.slice(1)})`);
+  });
+
+  lines.push('}');
+  return lines.join('\n');
+}
+
+export function generateJsonExport(palette: ExtractedColor[]): string {
+  const deduplicated = deduplicateColors(palette);
+
+  const jsonData = {
+    name: 'Extracted Color Palette',
+    colors: deduplicated.map((c) => {
+      const scale = buildColorScale(c);
+      return {
+        name: c.name,
+        hex: c.formats.hex,
+        rgb: c.formats.rgb.values,
+        oklch: c.formats.oklch.values,
+        temperature: c.metadata.temperature,
+        contrast: {
+          on_white: c.accessibility.contrast_on_white.ratio,
+          on_black: c.accessibility.contrast_on_black.ratio,
+        },
+        scale: {
+          50: scale['50'],
+          100: scale['100'],
+          200: scale['200'],
+          300: scale['300'],
+          400: scale['400'],
+          500: scale['500'],
+          600: scale['600'],
+          700: scale['700'],
+          800: scale['800'],
+          900: scale['900'],
+          950: scale['950'],
+        },
+      };
+    }),
+  };
+
+  return JSON.stringify(jsonData, null, 2);
+}
+
+export function generateExports(palette: ExtractedColor[]): ExportFormats {
+  return {
+    css_variables: generateCssVariables(palette),
+    scss_variables: generateScssVariables(palette),
+    tailwind_config: generateTailwindConfig(palette),
+    figma_tokens: generateFigmaTokens(palette),
+    swift: generateSwiftCode(palette),
+    kotlin: generateKotlinCode(palette),
+  };
+}
