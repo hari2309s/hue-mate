@@ -8,6 +8,7 @@ services:
       pnpm install && \
       pnpm --filter "@hue-und-you/types" build && \
       pnpm --filter "@hue-und-you/config" build && \
+      pnpm --filter "@hue-und-you/utils" build && \
       pnpm --filter "@hue-und-you/ml-segmentation" build && \
       pnpm --filter "@hue-und-you/color-engine" build && \
       pnpm --filter "@hue-und-you/db" build && \
