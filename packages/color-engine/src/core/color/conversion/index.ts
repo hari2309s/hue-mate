@@ -1,4 +1,4 @@
-// Export optimized versions as primary API
+// Export oklab conversions
 export {
   rgbToOklabCached as rgbToOklab,
   rgbToHslCached as rgbToHsl,
@@ -8,10 +8,8 @@ export {
   batchRgbToHsl,
   clearConversionCaches,
   getConversionCacheStats,
-} from '@/core/color/conversion/optimized';
-
-// Export non-cached versions (these don't need optimization)
-export { oklabToOklch } from '@/core/color/conversion/oklab';
+  oklabToOklch,
+} from '@/core/color/conversion/oklab';
 
 // Re-export format builders
 export {
@@ -21,6 +19,3 @@ export {
   labToLch,
   buildColorFormats,
 } from '@/core/color/conversion/formats';
-
-// Export types
-export type { OklabColor } from '@/types/segmentation';
