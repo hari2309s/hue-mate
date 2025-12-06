@@ -1,15 +1,12 @@
-export { segmentForegroundBackground } from '@/core/segmentation/foreground-background';
-export { segmentSemantic } from '@/core/segmentation/semantic';
-
-// Export optimized pixel extraction (replaces existing)
+// Import from ml-segmentation package
 export {
-  extractPixels,
-  extractPixelsMultiScale,
-} from '@/core/segmentation/pixel-extraction-optimized';
-
-export { splitPixelsByLuminance } from '@/core/segmentation/fallback';
-export {
+  segmentForegroundBackground,
+  segmentSemantic,
+  splitPixelsByLuminance,
   classifySegment,
   FOREGROUND_LABELS,
   AMBIGUOUS_LABELS,
-} from '@/core/segmentation/classification';
+} from '@hue-und-you/ml-segmentation';
+
+// Export pixel extraction
+export { extractPixels, extractPixelsMultiScale } from '@/core/segmentation/pixel-extraction';
