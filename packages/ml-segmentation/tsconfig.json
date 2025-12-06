@@ -7,11 +7,12 @@
     "paths": {
       "@/*": ["./*"],
       "@hue-und-you/config": ["../config/src/index.ts"],
-      "@hue-und-you/config/*": ["../config/src/*"]
+      "@hue-und-you/config/*": ["../config/src/*"],
+      "@hue-und-you/utils": ["../utils/src/index.ts"],
+      "@hue-und-you/utils/*": ["../utils/src/*"]
     }
   },
   "references": [{ "path": "../config" }],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
-

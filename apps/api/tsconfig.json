@@ -18,7 +18,9 @@
     { "path": "../../packages/db" },
     { "path": "../../packages/api-schema" },
     { "path": "../../packages/color-engine" },
-    { "path": "../../packages/ml-segmentation" }
+    { "path": "../../packages/ml-segmentation" },
+    { "path": "../../packages/config" },
+    { "path": "../../packages/utils" }
   ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],

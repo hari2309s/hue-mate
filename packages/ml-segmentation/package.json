@@ -23,6 +23,7 @@
   ],
   "dependencies": {
     "@hue-und-you/config": "workspace:*",
+    "@hue-und-you/utils": "workspace:*",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
@@ -31,4 +32,3 @@
   },
   "packageManager": "pnpm@10.22.0"
 }
-

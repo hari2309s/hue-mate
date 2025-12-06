@@ -24,6 +24,7 @@
   "dependencies": {
     "@hue-und-you/config": "workspace:*",
     "@hue-und-you/ml-segmentation": "workspace:*",
+    "@hue-und-you/utils": "workspace:*",
     "color-namer": "^1.4.0",
     "nearest-pantone": "^1.0.1",
     "sharp": "^0.34.5"
@@ -34,4 +35,3 @@
   },
   "packageManager": "pnpm@10.22.0"
 }
-

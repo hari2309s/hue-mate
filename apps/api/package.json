@@ -23,6 +23,7 @@
     "@hue-und-you/db": "workspace:*",
     "@hue-und-you/ml-segmentation": "workspace:*",
     "@hue-und-you/types": "workspace:*",
+    "@hue-und-you/utils": "workspace:*",
     "@trpc/server": "^11.7.1",
     "color-namer": "^1.4.0",
     "cors": "^2.8.5",
