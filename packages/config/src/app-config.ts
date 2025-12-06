@@ -97,6 +97,29 @@ export const config = {
   logging: {
     level: getEnv('LOG_LEVEL', 'info') as 'debug' | 'info' | 'warn' | 'error',
   },
+  performance: {
+    // Enable conversion caching (default: true)
+    enableConversionCache: true,
+
+    // Cache sizes
+    oklabCacheSize: 2000,
+    hslCacheSize: 2000,
+    oklchCacheSize: 1000,
+
+    // Pixel sampling strategy
+    pixelSamplingStrategy: 'golden-ratio' as const,
+
+    // Enable multi-scale for large images (default: true)
+    enableMultiScale: true,
+    multiScaleThreshold: 10000000, // 10M pixels
+
+    // K-means optimization
+    kmeansEarlyStop: true,
+    kmeansChangeThreshold: 0.001,
+
+    // Spatial indexing
+    spatialHashGridSize: 10,
+  },
 } as const;
 
 export type Config = typeof config;
@@ -104,6 +127,7 @@ export type AppConfig = typeof config.app;
 export type HuggingFaceConfig = typeof config.huggingface;
 export type ExtractionConfig = typeof config.extraction;
 export type RateLimitConfig = typeof config.rateLimit;
+export type PerformanceConfig = typeof config.performance;
 
 export function validateConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -161,5 +185,3 @@ export function printConfigSummary(): void {
   console.log(`Log Level: ${config.logging.level}`);
   console.log('========================\n');
 }
-
-
