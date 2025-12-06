@@ -4,8 +4,9 @@ import type {
   RGBValues,
   SegmentInfo,
 } from '@hue-und-you/types';
-import { logger } from '@/utils';
+import { logger, perfMonitor } from '@/utils';
 import { config } from '@/config';
+import { clearConversionCaches, getConversionCacheStats } from '@/core/color/conversion';
 import type {
   ISegmentationService,
   IPixelExtractionService,
@@ -19,7 +20,7 @@ import type {
 
 /**
  * Orchestrates the color extraction pipeline using dependency-injected services.
- * Follows Single Responsibility Principle - only coordinates service calls.
+ * Now with performance monitoring and cache management.
  */
 export class ColorExtractionOrchestrator {
   constructor(
@@ -37,70 +38,110 @@ export class ColorExtractionOrchestrator {
     options: ExtractionOptions = {},
     hooks: ExtractionHooks = {}
   ): Promise<ColorPaletteResult> {
+    perfMonitor.start('full-pipeline');
     const processingStart = Date.now();
     let partialSent = false;
 
     logger.info('🎨 Color Extraction Orchestrator: Starting pipeline...');
 
-    // Reset state
-    this.colorFormattingService.resetNameTracker();
+    try {
+      // Clear conversion caches to start fresh
+      if (Boolean(config.performance?.enableConversionCache) !== false) {
+        clearConversionCaches();
+      }
 
-    // STAGE 1: Segmentation
-    logger.info('📐 Stage 1/5: Segmentation');
-    const segmentation = await this.segmentationService.segment(imageBuffer);
+      // Reset state
+      this.colorFormattingService.resetNameTracker();
 
-    // STAGE 2: Pixel Extraction
-    logger.info('🎯 Stage 2/5: Pixel Extraction');
-    const { fgPixels, bgPixels, metadata } = await this.pixelExtractionService.extract(
-      imageBuffer,
-      segmentation
-    );
+      // STAGE 1: Segmentation
+      perfMonitor.start('stage-1-segmentation');
+      logger.info('📐 Stage 1/5: Segmentation');
+      const segmentation = await this.segmentationService.segment(imageBuffer);
+      perfMonitor.end('stage-1-segmentation');
 
-    // STAGE 3: Clustering
-    logger.info('🔬 Stage 3/5: Clustering');
-    const { dominantFgColors, dominantBgColors } = await this.clusteringService.cluster(
-      fgPixels,
-      bgPixels,
-      { numColors: options.numColors }
-    );
+      // STAGE 2: Pixel Extraction
+      perfMonitor.start('stage-2-pixel-extraction');
+      logger.info('🎯 Stage 2/5: Pixel Extraction');
+      const { fgPixels, bgPixels, metadata } = await this.pixelExtractionService.extract(
+        imageBuffer,
+        segmentation
+      );
+      perfMonitor.end('stage-2-pixel-extraction');
 
-    // STAGE 4: Color Formatting
-    logger.info('🏷️  Stage 4/5: Color Formatting & Naming');
-    const palette = await this.formatColors(
-      dominantFgColors,
-      dominantBgColors,
-      options,
-      hooks,
-      partialSent
-    );
+      // STAGE 3: Clustering
+      perfMonitor.start('stage-3-clustering');
+      logger.info('🔬 Stage 3/5: Clustering');
+      const { dominantFgColors, dominantBgColors } = await this.clusteringService.cluster(
+        fgPixels,
+        bgPixels,
+        { numColors: options.numColors }
+      );
+      perfMonitor.end('stage-3-clustering');
 
-    // STAGE 5: Export Generation
-    logger.info('📦 Stage 5/5: Export Generation');
-    const exports = this.exportService.generate(palette);
+      // STAGE 4: Color Formatting
+      perfMonitor.start('stage-4-formatting');
+      logger.info('🏷️  Stage 4/5: Color Formatting & Naming');
+      const palette = await this.formatColors(
+        dominantFgColors,
+        dominantBgColors,
+        options,
+        hooks,
+        partialSent
+      );
+      perfMonitor.end('stage-4-formatting');
 
-    // Build final result
-    const segmentInfo = this.buildSegmentInfo(fgPixels.length, bgPixels.length, segmentation);
-    const extractionMetadata = this.metadataService.build(palette, segmentation, processingStart);
+      // STAGE 5: Export Generation
+      perfMonitor.start('stage-5-export');
+      logger.info('📦 Stage 5/5: Export Generation');
+      const exports = this.exportService.generate(palette);
+      perfMonitor.end('stage-5-export');
 
-    logger.success(
-      `✨ Pipeline Complete! Extracted ${palette.length} colors in ${Date.now() - processingStart}ms`
-    );
+      // Build final result
+      const segmentInfo = this.buildSegmentInfo(fgPixels.length, bgPixels.length, segmentation);
+      const extractionMetadata = this.metadataService.build(palette, segmentation, processingStart);
 
-    return {
-      id: `palette_${Date.now()}`,
-      source_image: {
-        filename,
-        dimensions: {
-          width: metadata.width || 0,
-          height: metadata.height || 0,
+      const totalTime = Date.now() - processingStart;
+
+      logger.success(`✨ Pipeline Complete! Extracted ${palette.length} colors in ${totalTime}ms`);
+
+      // Log cache statistics if enabled
+      if (Boolean(config.performance?.enableConversionCache) !== false) {
+        const cacheStats = getConversionCacheStats();
+        logger.info('Cache statistics', {
+          oklabSize: cacheStats.oklab.size,
+          hslSize: cacheStats.hsl.size,
+          oklchSize: cacheStats.oklch.size,
+        });
+      }
+
+      // Print performance summary in development
+      if (config.app.isDevelopment || process.env.LOG_PERFORMANCE === 'true') {
+        perfMonitor.printSummary();
+      }
+
+      return {
+        id: `palette_${Date.now()}`,
+        source_image: {
+          filename,
+          dimensions: {
+            width: metadata.width || 0,
+            height: metadata.height || 0,
+          },
+          processed_at: new Date().toISOString(),
         },
-        processed_at: new Date().toISOString(),
-      },
-      segments: segmentInfo,
-      palette,
-      exports,
-      metadata: extractionMetadata,
-    };
+        segments: segmentInfo,
+        palette,
+        exports,
+        metadata: extractionMetadata,
+      };
+    } finally {
+      perfMonitor.end('full-pipeline');
+
+      // Reset monitor for next extraction
+      if (!config.app.isDevelopment && process.env.LOG_PERFORMANCE !== 'true') {
+        perfMonitor.reset();
+      }
+    }
   }
 
   private async formatColors(

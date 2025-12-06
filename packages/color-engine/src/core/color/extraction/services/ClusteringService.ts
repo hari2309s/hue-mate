@@ -1,4 +1,4 @@
-import { logger } from '@/utils';
+import { logger, perfMonitor } from '@/utils';
 import {
   applySaturationBias,
   kMeansClusteringOklab,
@@ -20,47 +20,62 @@ export class ClusteringService implements IClusteringService {
     bgPixels: PixelData[],
     options?: ClusteringOptions
   ): Promise<ClusteringResult> {
+    perfMonitor.start('clustering');
     logger.info('🔬 Clustering service: Starting...');
 
-    const optimalCount = this.determineOptimalColorCount(fgPixels, bgPixels, options?.numColors);
+    try {
+      const optimalCount = this.determineOptimalColorCount(fgPixels, bgPixels, options?.numColors);
 
-    const fgRatio = fgPixels.length / (fgPixels.length + bgPixels.length);
-    const fgColorCount = Math.max(2, Math.round(optimalCount * Math.max(0.3, fgRatio)));
-    const bgColorCount = Math.max(2, optimalCount - fgColorCount);
+      const fgRatio = fgPixels.length / (fgPixels.length + bgPixels.length);
+      const fgColorCount = Math.max(2, Math.round(optimalCount * Math.max(0.3, fgRatio)));
+      const bgColorCount = Math.max(2, optimalCount - fgColorCount);
 
-    logger.info(`Distributing colors: ${fgColorCount} FG + ${bgColorCount} BG`);
+      logger.info(`Distributing colors: ${fgColorCount} FG + ${bgColorCount} BG`);
 
-    // Apply bias and cluster
-    const biasedFgPixels = applySaturationBias(fgPixels);
-    const biasedBgPixels = applySaturationBias(bgPixels);
+      // Apply bias and cluster
+      perfMonitor.start('clustering.saturation-bias');
+      const biasedFgPixels = applySaturationBias(fgPixels);
+      const biasedBgPixels = applySaturationBias(bgPixels);
+      perfMonitor.end('clustering.saturation-bias');
 
-    const rawFgColors =
-      biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount * 4) : [];
-    const rawBgColors =
-      biasedBgPixels.length > 0 ? kMeansClusteringOklab(biasedBgPixels, bgColorCount * 4) : [];
+      perfMonitor.start('clustering.kmeans');
+      const rawFgColors =
+        biasedFgPixels.length > 0 ? kMeansClusteringOklab(biasedFgPixels, fgColorCount * 4) : [];
+      const rawBgColors =
+        biasedBgPixels.length > 0 ? kMeansClusteringOklab(biasedBgPixels, bgColorCount * 4) : [];
+      perfMonitor.end('clustering.kmeans');
 
-    // Cleanup pipeline
-    const dedupedFg = deduplicateSimilarColors(rawFgColors, 0.35);
-    const dedupedBg = deduplicateSimilarColors(rawBgColors, 0.35);
+      // Cleanup pipeline
+      perfMonitor.start('clustering.deduplication');
+      const dedupedFg = deduplicateSimilarColors(rawFgColors, 0.35);
+      const dedupedBg = deduplicateSimilarColors(rawBgColors, 0.35);
+      perfMonitor.end('clustering.deduplication');
 
-    const diverseFg = enforceHueDiversity(dedupedFg, 35);
-    const diverseBg = enforceHueDiversity(dedupedBg, 35);
+      perfMonitor.start('clustering.diversity');
+      const diverseFg = enforceHueDiversity(dedupedFg, 35);
+      const diverseBg = enforceHueDiversity(dedupedBg, 35);
+      perfMonitor.end('clustering.diversity');
 
-    const slicedFg = diverseFg.slice(0, fgColorCount);
-    const slicedBg = diverseBg.slice(0, bgColorCount);
+      const slicedFg = diverseFg.slice(0, fgColorCount);
+      const slicedBg = diverseBg.slice(0, bgColorCount);
 
-    let dominantFgColors = finalCleanup(slicedFg);
-    let dominantBgColors = finalCleanup(slicedBg);
+      perfMonitor.start('clustering.final-cleanup');
+      let dominantFgColors = finalCleanup(slicedFg);
+      let dominantBgColors = finalCleanup(slicedBg);
+      perfMonitor.end('clustering.final-cleanup');
 
-    // Ensure minimum colors
-    dominantFgColors = this.ensureMinimumColors(dominantFgColors, diverseFg, fgColorCount, 2);
-    dominantBgColors = this.ensureMinimumColors(dominantBgColors, diverseBg, bgColorCount, 2);
+      // Ensure minimum colors
+      dominantFgColors = this.ensureMinimumColors(dominantFgColors, diverseFg, fgColorCount, 2);
+      dominantBgColors = this.ensureMinimumColors(dominantBgColors, diverseBg, bgColorCount, 2);
 
-    logger.success(
-      `✓ Clustering complete: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG`
-    );
+      logger.success(
+        `✓ Clustering complete: ${dominantFgColors.length} FG + ${dominantBgColors.length} BG`
+      );
 
-    return { dominantFgColors, dominantBgColors };
+      return { dominantFgColors, dominantBgColors };
+    } finally {
+      perfMonitor.end('clustering');
+    }
   }
 
   private determineOptimalColorCount(

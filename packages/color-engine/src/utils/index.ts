@@ -16,3 +16,12 @@ export {
   asyncErrorHandler,
   withRetry,
 } from '@/utils/errors';
+
+// Export performance monitoring utilities
+export {
+  perfMonitor,
+  monitored,
+  LRUCache,
+  OperationBatcher,
+  ObjectPool,
+} from '@/utils/performance';
