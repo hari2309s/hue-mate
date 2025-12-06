@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { config } from '@hue-und-you/color-engine';
+import { config } from '@hue-und-you/config';
 
 const ALLOWED_MIME_TYPES = [
   'image/png',

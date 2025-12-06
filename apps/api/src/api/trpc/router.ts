@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { TRPCError } from '@trpc/server';
 import { router, publicProcedure } from '@hue-und-you/api-schema';
-import { logger, NotFoundError, ValidationError, StorageError } from '@hue-und-you/color-engine';
+import { logger, NotFoundError, ValidationError, StorageError } from '@hue-und-you/utils';
 import { imageStorage, jobQueue, asyncProcessor } from '@/services';
 import { uploadImageSchema, processImageSchema, getResultSchema } from '@/api/validation/schemas';
 

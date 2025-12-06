@@ -1,11 +1,7 @@
 import 'dotenv/config';
 import { createApp } from '@/app';
-import {
-  config,
-  validateConfig,
-  printConfigSummary,
-  logger,
-} from '@hue-und-you/color-engine';
+import { config, validateConfig, printConfigSummary } from '@hue-und-you/config';
+import { logger } from '@hue-und-you/utils';
 import { imageStorage } from '@/services';
 
 async function startServer() {

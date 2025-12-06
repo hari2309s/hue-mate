@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { imageStorage, jobQueue } from '@/services';
-import { logger, TimeoutError, ImageProcessingError } from '@/utils';
-import { config, extractColorsFromImage } from '@hue-und-you/color-engine';
+import { logger, TimeoutError, ImageProcessingError } from '@hue-und-you/utils';
+import { extractColorsFromImage } from '@hue-und-you/color-engine';
+import { config } from '@hue-und-you/config';
 
 const router = Router();
 

@@ -1,9 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { logger } from '@/utils';
-import { config } from '@hue-und-you/color-engine';
-import { StorageError } from '@/utils/errors';
+import { config } from '@hue-und-you/config';
+import { StorageError, logger } from '@hue-und-you/utils';
 
 export interface ImageData {
   buffer: Buffer;

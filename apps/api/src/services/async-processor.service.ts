@@ -1,11 +1,6 @@
 import type { ColorPaletteResult } from '@hue-und-you/types';
-import {
-  logger,
-  TimeoutError,
-  ImageProcessingError,
-  NotFoundError,
-  config,
-} from '@hue-und-you/color-engine';
+import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '@hue-und-you/utils';
+import { config } from '@hue-und-you/config';
 import { jobQueue, imageStorage } from '@/services';
 import { extractColorsFromImage } from '@hue-und-you/color-engine';
 
