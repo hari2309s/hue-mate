@@ -1,7 +1,6 @@
 import sharp from 'sharp';
 import { config } from '@/config';
-import { logger } from '@/utils';
-import { SegmentationError, ExternalAPIError, withRetry } from '@/utils/errors';
+import { SegmentationError, ExternalAPIError, withRetry, logger } from '@hue-und-you/utils';
 import type { ForegroundMask, SegmentResult } from '@/types/segmentation';
 import { classifySegment } from './classification';
 

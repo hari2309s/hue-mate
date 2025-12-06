@@ -1,6 +1,6 @@
 import sharp from 'sharp';
-import { config } from '@/config';
-import { logger } from '@/utils';
+import { config } from '@hue-und-you/config';
+import { logger } from '@hue-und-you/utils';
 import type { ForegroundMask, ExtractedPixels, PixelData } from '@/types/segmentation';
 
 /**

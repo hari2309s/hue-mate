@@ -1,6 +1,6 @@
 import sharp from 'sharp';
-import { config } from '@/config';
-import { logger } from '@/utils';
+import { config } from '@hue-und-you/config';
+import { logger } from '@hue-und-you/utils';
 import type { SegmentResult } from '@/types/segmentation';
 
 export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResult[]> {
@@ -23,17 +23,17 @@ export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResul
       .toBuffer();
 
     logger.info(`Resized buffer size: ${resizedBuffer.length} bytes`);
-    
+
     // Use model-specific timeout, fallback to default
     const timeoutMs =
       config.huggingface.modelTimeouts?.segformer || config.huggingface.requestTimeoutMs;
-    
+
     logger.debug('SegFormer API timeout configuration', {
       timeoutMs,
       modelTimeout: config.huggingface.modelTimeouts?.segformer,
       defaultTimeout: config.huggingface.requestTimeoutMs,
     });
-    
+
     const requestStart = Date.now();
 
     const response = await fetch(
