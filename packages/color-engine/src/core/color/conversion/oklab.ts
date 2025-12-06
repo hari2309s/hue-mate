@@ -1,6 +1,6 @@
 import type { RGBValues, HSLValues, OKLCHValues } from '@hue-und-you/types';
 import type { OklabColor } from '@/types/segmentation';
-import { LRUCache } from '@/utils/performance';
+import { LRUCache } from '@hue-und-you/utils';
 
 /**
  * Optimized color conversions with intelligent caching

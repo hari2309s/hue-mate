@@ -1,4 +1,4 @@
-import { logger, perfMonitor } from '@/utils';
+import { logger, perfMonitor } from '@hue-und-you/utils';
 import { segmentForegroundBackground, segmentSemantic } from '@hue-und-you/ml-segmentation';
 import type {
   ISegmentationService,

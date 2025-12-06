@@ -1,11 +1,6 @@
-export * from './config';
-export * from './utils';
 export * from './types/segmentation';
 export * from './core';
 export * from './services';
-
-// Explicit exports for config
-export { config, validateConfig, printConfigSummary } from './config';
 
 export {
   SegmentationService,

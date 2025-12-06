@@ -4,8 +4,8 @@ import type {
   RGBValues,
   SegmentInfo,
 } from '@hue-und-you/types';
-import { logger, perfMonitor } from '@/utils';
-import { config } from '@/config';
+import { logger, perfMonitor } from '@hue-und-you/utils';
+import { config } from '@hue-und-you/config';
 import { clearConversionCaches, getConversionCacheStats } from '@/core/color/conversion';
 import type {
   ISegmentationService,

@@ -1,7 +1,7 @@
 import type { PixelWithWeight, OklabColor } from '@/types/segmentation';
 import { rgbToOklab, rgbToHsl } from '@/core/color/conversion';
 import type { HSLValues } from '@hue-und-you/types';
-import { config } from '@/config';
+import { config } from '@hue-und-you/config';
 
 interface ColorWithCache {
   r: number;

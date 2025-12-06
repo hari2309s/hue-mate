@@ -1,6 +1,6 @@
 import sharp from 'sharp';
-import { logger, perfMonitor } from '@/utils';
-import { config } from '@/config';
+import { logger, perfMonitor } from '@hue-und-you/utils';
+import { config } from '@hue-und-you/config';
 import {
   extractPixels,
   extractPixelsMultiScale,
