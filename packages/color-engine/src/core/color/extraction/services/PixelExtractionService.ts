@@ -5,7 +5,7 @@ import {
   extractPixels,
   extractPixelsMultiScale,
   splitPixelsByLuminance,
-} from '@/core/segmentation';
+} from '@hue-und-you/ml-segmentation';
 import type { IPixelExtractionService, PixelExtractionResult } from '@/core/color/extraction/types';
 import type { SegmentationResult } from '@/core/color/extraction/types';
 

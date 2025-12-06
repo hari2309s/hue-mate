@@ -6,10 +6,9 @@ export {
   segmentForegroundBackground,
   segmentSemantic,
   extractPixels,
+  extractPixelsMultiScale,
   splitPixelsByLuminance,
   classifySegment,
-  FOREGROUND_LABELS,
-  AMBIGUOUS_LABELS,
 } from '@hue-und-you/ml-segmentation';
 
 // ============================================================================

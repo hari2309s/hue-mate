@@ -16,21 +16,14 @@ async function callHuggingFaceAPI(
   }
 
   try {
-    logger.debug('Calling Mask2Former API', { 
+    logger.debug('Calling Mask2Former API', {
       attempt,
       imageSize: imageBuffer.length,
-      apiUrl: `${config.huggingface.apiUrl}/${config.huggingface.models.mask2former}`,
     });
 
     // Use model-specific timeout, fallback to default
     const timeoutMs =
       config.huggingface.modelTimeouts?.mask2former || config.huggingface.requestTimeoutMs;
-
-    logger.debug('Mask2Former API timeout configuration', {
-      timeoutMs,
-      modelTimeout: config.huggingface.modelTimeouts?.mask2former,
-      defaultTimeout: config.huggingface.requestTimeoutMs,
-    });
 
     const response = await fetch(
       `${config.huggingface.apiUrl}/${config.huggingface.models.mask2former}`,
@@ -285,10 +278,7 @@ export async function segmentForegroundBackground(
       errorDetails.error = String(error);
     }
 
-    logger.error(
-      error instanceof Error ? error : new Error(String(error)),
-      errorDetails
-    );
+    logger.error(error instanceof Error ? error : new Error(String(error)), errorDetails);
     return null;
   }
 }

@@ -301,9 +301,3 @@ export function addClassificationRule(rule: ClassificationRule): void {
 export function removeClassificationRule(name: string): boolean {
   return classifier.removeRule(name);
 }
-
-/**
- * Export for backwards compatibility (deprecated)
- */
-export const FOREGROUND_LABELS = new Set<string>();
-export const AMBIGUOUS_LABELS = new Set<string>();
