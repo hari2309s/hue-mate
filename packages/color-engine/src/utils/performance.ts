@@ -15,25 +15,18 @@ interface PerformanceMetrics {
 
 class PerformanceMonitor {
   private metrics: Map<string, PerformanceMetrics> = new Map();
-  private operationStack: string[] = [];
 
   start(operation: string, metadata?: Record<string, any>): void {
-    const key =
-      this.operationStack.length > 0
-        ? `${this.operationStack[this.operationStack.length - 1]}.${operation}`
-        : operation;
-
-    this.operationStack.push(key);
-
-    this.metrics.set(key, {
-      operation: key,
+    // Use the operation as-is, don't nest automatically
+    this.metrics.set(operation, {
+      operation,
       startTime: performance.now(),
       metadata,
     });
   }
 
   end(operation?: string): number {
-    const key = operation || this.operationStack.pop();
+    const key = operation;
 
     if (!key) {
       logger.warn('Performance monitor: no operation to end');
@@ -44,6 +37,10 @@ class PerformanceMonitor {
 
     if (!metric) {
       logger.warn(`Performance monitor: operation not found: ${key}`);
+      // Don't log the metrics map in production, it's too verbose
+      if (process.env.NODE_ENV === 'development') {
+        console.log('this.metrics ', this.metrics);
+      }
       return 0;
     }
 
@@ -77,7 +74,6 @@ class PerformanceMonitor {
 
   reset(): void {
     this.metrics.clear();
-    this.operationStack = [];
   }
 
   printSummary(): void {
