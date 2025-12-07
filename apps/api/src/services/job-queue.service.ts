@@ -1,14 +1,5 @@
-import type { UploadStatus, ColorPaletteResult } from '@hue-und-you/types';
 import { logger } from '@hue-und-you/utils';
-
-export interface JobData {
-  status: UploadStatus;
-  progress: number;
-  message: string;
-  result?: ColorPaletteResult;
-  startedAt?: Date;
-  completedAt?: Date;
-}
+import type { JobData, UploadStatus } from '@hue-und-you/types';
 
 class JobQueueService {
   private jobStore = new Map<string, JobData>();
@@ -85,14 +76,12 @@ class JobQueueService {
   }
 
   async withLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    // Wait for any in-flight processing
     const existingLock = this.processingLocks.get(id);
     if (existingLock) {
       logger.info('Waiting for existing processing lock', { jobId: id });
       await existingLock;
     }
 
-    // Create new lock
     const lockPromise = fn().finally(() => {
       this.processingLocks.delete(id);
       logger.info('Processing lock released', { jobId: id });

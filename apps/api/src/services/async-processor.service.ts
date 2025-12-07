@@ -1,14 +1,8 @@
-import type { ColorPaletteResult } from '@hue-und-you/types';
 import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '@hue-und-you/utils';
 import { config } from '@hue-und-you/config';
+import type { ColorPaletteResult, ProcessingOptions } from '@hue-und-you/types';
 import { jobQueue, imageStorage } from '@/services';
 import { extractColorsFromImage } from '@hue-und-you/color-engine';
-
-export interface ProcessingOptions {
-  numColors?: number;
-  includeBackground?: boolean;
-  generateHarmonies?: boolean;
-}
 
 class AsyncProcessorService {
   private activeTimeouts = new Map<string, NodeJS.Timeout>();
@@ -16,7 +10,6 @@ class AsyncProcessorService {
   async processImageAsync(imageId: string, options: ProcessingOptions = {}): Promise<void> {
     const logContext = { imageId, operation: 'async_processing' };
 
-    // Set up timeout
     const timeout = setTimeout(() => {
       logger.error(new TimeoutError('image processing', config.app.processingTimeoutMs), {
         ...logContext,
@@ -35,14 +28,12 @@ class AsyncProcessorService {
     this.activeTimeouts.set(imageId, timeout);
 
     try {
-      // Validate image exists
       const image = await imageStorage.get(imageId);
 
       if (!image) {
         throw new NotFoundError('Image', imageId);
       }
 
-      // Validate image buffer
       if (!Buffer.isBuffer(image.buffer) || image.buffer.length === 0) {
         throw new ImageProcessingError('Invalid image buffer', {
           imageId,
@@ -56,24 +47,20 @@ class AsyncProcessorService {
         options,
       });
 
-      // Update status to segmenting
       jobQueue.update(imageId, {
         status: 'segmenting',
         progress: 30,
         message: 'Segmenting image...',
       });
 
-      // Small delay to ensure status update is visible
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Update status to extracting
       jobQueue.update(imageId, {
         status: 'extracting',
         progress: 60,
         message: 'Extracting colors...',
       });
 
-      // Perform extraction
       const result: ColorPaletteResult = await extractColorsFromImage(
         image.buffer,
         image.filename,
@@ -84,7 +71,6 @@ class AsyncProcessorService {
         }
       );
 
-      // Validate result
       if (!result || !result.palette || result.palette.length === 0) {
         throw new ImageProcessingError('No colors extracted from image', {
           imageId,
@@ -92,7 +78,6 @@ class AsyncProcessorService {
         });
       }
 
-      // Update to complete
       jobQueue.update(imageId, {
         status: 'complete',
         progress: 100,
@@ -113,7 +98,6 @@ class AsyncProcessorService {
         errorType: err.constructor.name,
       });
 
-      // Determine user-friendly error message
       let userMessage = 'Processing failed';
 
       if (error instanceof NotFoundError) {
@@ -134,7 +118,6 @@ class AsyncProcessorService {
         message: userMessage,
       });
     } finally {
-      // Clear timeout
       const existingTimeout = this.activeTimeouts.get(imageId);
       if (existingTimeout) {
         clearTimeout(existingTimeout);
@@ -150,7 +133,6 @@ class AsyncProcessorService {
       this.activeTimeouts.delete(imageId);
       logger.info('Processing cancelled', { imageId });
 
-      // Update job status
       jobQueue.update(imageId, {
         status: 'error',
         progress: 0,

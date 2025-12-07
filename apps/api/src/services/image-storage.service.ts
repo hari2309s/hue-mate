@@ -3,12 +3,7 @@ import path from 'path';
 import os from 'os';
 import { config } from '@hue-und-you/config';
 import { StorageError, logger } from '@hue-und-you/utils';
-
-export interface ImageData {
-  buffer: Buffer;
-  filename: string;
-  contentType: string;
-}
+import type { ImageData } from '@hue-und-you/types';
 
 interface ImageMetadata {
   filename: string;
@@ -76,7 +71,6 @@ class ImageStorageService {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error(err, { operation: 'image_store', imageId: id });
 
-      // Cleanup on failure
       this.imageStore.delete(id);
       this.metadataStore.delete(id);
 
@@ -115,7 +109,6 @@ class ImageStorageService {
         code: (error as any).code,
       });
 
-      // Clean up stale references
       this.imageStore.delete(id);
       this.metadataStore.delete(id);
       return undefined;
@@ -143,7 +136,6 @@ class ImageStorageService {
         code: (error as any).code,
       });
 
-      // Clean up references even if file deletion fails
       this.imageStore.delete(id);
       this.metadataStore.delete(id);
       return false;
@@ -188,7 +180,6 @@ class ImageStorageService {
           else failed++;
         }
       } catch (error) {
-        // File doesn't exist, clean up reference
         this.imageStore.delete(id);
         this.metadataStore.delete(id);
         cleaned++;
@@ -211,7 +202,6 @@ class ImageStorageService {
 
 export const imageStorage = new ImageStorageService();
 
-// Schedule periodic cleanup with error handling
 setInterval(() => {
   imageStorage.cleanup().catch((err) => {
     logger.error('Cleanup task failed', {
