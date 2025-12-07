@@ -1,7 +1,11 @@
-// Extraction Pipeline (Main API)
+// ============================================================================
+// EXTRACTION PIPELINE (Main API)
+// ============================================================================
 export { extractColorsFromImage, ColorExtractionOrchestrator } from './extraction';
 
-// Services
+// ============================================================================
+// SERVICES
+// ============================================================================
 export {
   SegmentationService,
   PixelExtractionService,
@@ -11,21 +15,62 @@ export {
   MetadataService,
 } from './extraction';
 
-// Types
+// ============================================================================
+// RE-EXPORT TYPES FROM @hue-und-you/types
+// ============================================================================
 export type {
+  // Extraction
   ExtractionOptions,
   ExtractionHooks,
-  SegmentationResult,
-  PixelExtractionResult,
-  ClusteringResult,
+  ServiceSegmentationResult as SegmentationResult,
+  ServicePixelExtractionResult as PixelExtractionResult,
+  ServiceClusteringResult as ClusteringResult,
+
+  // Segmentation
   SegmentationMethod,
   SegmentationQuality,
-} from './extraction';
+  SegmentResult,
+  ForegroundMask,
+  PixelData,
+  PixelWithWeight,
+  PixelWithOklab,
+  ExtractedPixels,
+  SegmentInfo,
+
+  // Color
+  RGBValues,
+  OKLCHValues,
+  HSLValues,
+  HSBValues,
+  CMYKValues,
+  LABValues,
+  LCHValues,
+  OklabColor,
+  ColorFormats,
+  ContrastResult,
+  APCAResult,
+  AccessibilityInfo,
+  TintShade,
+  HarmonyColor,
+  ColorHarmony,
+  ColorTemperature,
+  ColorMetadata,
+  ColorSource,
+  ExtractedColor,
+  ToneBucket,
+  PaletteToneMap,
+  HuePalette,
+  ColorFormattingOptions,
+
+  // Result
+  ColorPaletteResult,
+  ExtractionMetadata,
+  ExportFormats,
+} from '@hue-und-you/types';
 
 // ============================================================================
 // CONVERSION
 // ============================================================================
-
 export {
   rgbToOklab,
   rgbToHsl,
@@ -46,7 +91,6 @@ export {
 // ============================================================================
 // CLUSTERING
 // ============================================================================
-
 export {
   kMeansClusteringOklab,
   applySaturationBias,
@@ -58,7 +102,6 @@ export {
 // ============================================================================
 // NAMING
 // ============================================================================
-
 export {
   generateColorName,
   generateCssVariableName,
@@ -67,12 +110,9 @@ export {
   getPaletteTracker,
 } from './naming';
 
-export type { PaletteToneMap, ToneBucket, HuePalette } from './naming';
-
 // ============================================================================
 // ACCESSIBILITY
 // ============================================================================
-
 export {
   buildAccessibilityInfo,
   contrastRatio,
@@ -83,7 +123,6 @@ export {
 // ============================================================================
 // HARMONY
 // ============================================================================
-
 export {
   generateTints,
   generateShades,
@@ -94,7 +133,6 @@ export {
 // ============================================================================
 // EXPORT
 // ============================================================================
-
 export {
   generateExports,
   generateCssVariables,
@@ -112,13 +150,11 @@ export {
 // ============================================================================
 // FORMATTING
 // ============================================================================
-
-export { formatColor, type ColorFormattingOptions } from './formatting';
+export { formatColor } from './formatting';
 
 // ============================================================================
 // ML SEGMENTATION (Re-export)
 // ============================================================================
-
 export {
   segmentForegroundBackground,
   segmentSemantic,
