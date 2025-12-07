@@ -1,12 +1,8 @@
-import type { RGBValues, ExtractedColor } from '@hue-und-you/types';
+import type { RGBValues, ExtractedColor, ColorFormattingOptions } from '@hue-und-you/types';
 import { buildColorFormats } from '@/conversion';
 import { buildAccessibilityInfo } from '@/accessibility';
 import { generateTintsAndShades, generateHarmonies } from '@/harmony';
 import { generateColorName, findNearestPantone, generateCssVariableName } from '@/naming';
-
-export interface ColorFormattingOptions {
-  generateHarmonies?: boolean;
-}
 
 export async function formatColor(
   rgb: RGBValues,
