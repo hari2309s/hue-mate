@@ -1,7 +1,15 @@
 import sharp from 'sharp';
 import { logger, perfMonitor } from '@hue-und-you/utils';
 import { config } from '@hue-und-you/config';
-import type { ExtractedColor, RGBValues, ExtractionMetadata, PixelData } from '@hue-und-you/types';
+import type {
+  ExtractedColor,
+  RGBValues,
+  ExtractionMetadata,
+  PixelData,
+  SegmentationResult,
+  PixelExtractionResult,
+  ClusteringResult,
+} from '@hue-und-you/types';
 import {
   segmentForegroundBackground,
   segmentSemantic,
@@ -25,31 +33,12 @@ import { resetPaletteNameTracker } from '@/naming';
 // TYPES
 // ============================================================================
 
-export type SegmentationMethod = 'mask2former' | 'segformer' | 'fallback-luminance';
-export type SegmentationQuality = 'high' | 'medium' | 'low';
-
-export interface SegmentationResult {
-  foregroundMask: any;
-  method: SegmentationMethod;
-  quality: SegmentationQuality;
-  usedFallback: boolean;
-  confidence: number;
-  categories: string[];
-}
-
-export interface PixelExtractionResult {
-  fgPixels: PixelData[];
-  bgPixels: PixelData[];
-  metadata: {
-    width?: number;
-    height?: number;
-  };
-}
-
-export interface ClusteringResult {
-  dominantFgColors: Array<PixelData & { weight: number }>;
-  dominantBgColors: Array<PixelData & { weight: number }>;
-}
+export type {
+  SegmentationResult,
+  PixelExtractionResult,
+  ClusteringResult,
+} from '@hue-und-you/types';
+export type { SegmentationMethod, SegmentationQuality } from '@hue-und-you/types';
 
 export interface ExtractionOptions {
   numColors?: number;
@@ -68,8 +57,8 @@ export class SegmentationService {
 
     let foregroundMask = null;
     let usedFallback = false;
-    let method: SegmentationMethod = 'mask2former';
-    let quality: SegmentationQuality = 'high';
+    let method: SegmentationResult['method'] = 'mask2former';
+    let quality: SegmentationResult['quality'] = 'high';
     let confidence = 0.9;
     let categories: string[] = [];
 
@@ -411,18 +400,7 @@ export class MetadataService {
     segmentation: SegmentationResult,
     processingStartTime: number
   ): ExtractionMetadata {
-    return buildExtractionMetadata(
-      palette,
-      {
-        foregroundMask: segmentation.foregroundMask,
-        method: segmentation.method,
-        quality: segmentation.quality,
-        usedFallback: segmentation.usedFallback,
-        confidence: segmentation.confidence,
-        categories: segmentation.categories,
-      },
-      processingStartTime
-    );
+    return buildExtractionMetadata(palette, segmentation, processingStartTime);
   }
 }
 
@@ -509,7 +487,7 @@ function buildSuggestedUsage(
 
 export function buildExtractionMetadata(
   palette: ExtractedColor[],
-  segmentationResult: any,
+  segmentationResult: SegmentationResult,
   processingStartTime: number
 ): ExtractionMetadata {
   const colorDiversity = computeColorDiversity(palette);
