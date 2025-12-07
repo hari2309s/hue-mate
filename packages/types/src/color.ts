@@ -98,26 +98,50 @@ export interface ColorHarmony {
   split_complementary: HarmonyColor[];
 }
 
+export type ColorTemperature = 'warm' | 'cool' | 'neutral';
+
 export interface ColorMetadata {
-  temperature: 'warm' | 'cool' | 'neutral';
+  temperature: ColorTemperature;
   nearest_css_color: string;
   pantone_approximation?: string;
   css_variable_name: string;
 }
 
+export interface ColorSource {
+  segment: 'foreground' | 'background';
+  category?: string;
+  pixel_coverage: number;
+  confidence: number;
+}
+
 export interface ExtractedColor {
   id: string;
   name: string;
-  source: {
-    segment: 'foreground' | 'background';
-    category?: string;
-    pixel_coverage: number;
-    confidence: number;
-  };
+  source: ColorSource;
   formats: ColorFormats;
   accessibility: AccessibilityInfo;
   tints: TintShade[];
   shades: TintShade[];
   harmony: ColorHarmony;
   metadata: ColorMetadata;
+}
+
+// Naming types
+export type ToneBucket = 'dark' | 'medium' | 'light';
+
+export interface PaletteToneMap {
+  dark: string[];
+  medium: string[];
+  light: string[];
+}
+
+export interface HuePalette {
+  family: string;
+  range: [number, number];
+  names: PaletteToneMap;
+}
+
+// Color formatting options
+export interface ColorFormattingOptions {
+  generateHarmonies?: boolean;
 }

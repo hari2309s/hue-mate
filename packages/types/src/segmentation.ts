@@ -68,35 +68,3 @@ export interface SegmentInfo {
   method?: SegmentationMethod;
   quality?: SegmentationQuality;
 }
-
-/**
- * Complete segmentation result from service
- */
-export interface SegmentationResult {
-  foregroundMask: ForegroundMask | null;
-  method: SegmentationMethod;
-  quality: SegmentationQuality;
-  usedFallback: boolean;
-  confidence: number;
-  categories: string[];
-}
-
-/**
- * Pixel extraction result from service
- */
-export interface PixelExtractionResult {
-  fgPixels: PixelData[];
-  bgPixels: PixelData[];
-  metadata: {
-    width?: number;
-    height?: number;
-  };
-}
-
-/**
- * Clustering result from service
- */
-export interface ClusteringResult {
-  dominantFgColors: Array<PixelData & { weight: number }>;
-  dominantBgColors: Array<PixelData & { weight: number }>;
-}

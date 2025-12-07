@@ -1,5 +1,11 @@
 import type { ExtractedColor } from './color';
-import type { SegmentInfo, SegmentationMethod } from './segmentation';
+import type {
+  SegmentInfo,
+  SegmentationMethod,
+  SegmentationQuality,
+  ForegroundMask,
+  PixelData,
+} from './segmentation';
 
 export interface ExtractionMetadata {
   processingTimeMs: number;
@@ -48,4 +54,33 @@ export interface ExtractionOptions {
   numColors?: number;
   includeBackground?: boolean;
   generateHarmonies?: boolean;
+}
+
+// Extraction hooks for progress callbacks
+export interface ExtractionHooks {
+  onPartial?: (colors: ExtractedColor[]) => void;
+}
+
+// Service-level result types (different from segmentation types)
+export interface ServiceSegmentationResult {
+  foregroundMask: ForegroundMask | null;
+  method: SegmentationMethod;
+  quality: SegmentationQuality;
+  usedFallback: boolean;
+  confidence: number;
+  categories: string[];
+}
+
+export interface ServicePixelExtractionResult {
+  fgPixels: PixelData[];
+  bgPixels: PixelData[];
+  metadata: {
+    width?: number;
+    height?: number;
+  };
+}
+
+export interface ServiceClusteringResult {
+  dominantFgColors: Array<PixelData & { weight: number }>;
+  dominantBgColors: Array<PixelData & { weight: number }>;
 }
