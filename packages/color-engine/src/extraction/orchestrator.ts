@@ -1,4 +1,11 @@
-import type { ColorPaletteResult, ExtractedColor, SegmentInfo } from '@hue-und-you/types';
+import type {
+  ColorPaletteResult,
+  ExtractedColor,
+  SegmentInfo,
+  ExtractionOptions,
+  ExtractionHooks,
+  ServiceSegmentationResult,
+} from '@hue-und-you/types';
 import { logger, perfMonitor } from '@hue-und-you/utils';
 import { config } from '@hue-und-you/config';
 import { clearConversionCaches, getConversionCacheStats } from '@/conversion';
@@ -9,12 +16,7 @@ import {
   ColorFormattingService,
   ExportService,
   MetadataService,
-  type ExtractionOptions,
 } from './services';
-
-export interface ExtractionHooks {
-  onPartial?: (colors: ExtractedColor[]) => void;
-}
 
 export class ColorExtractionOrchestrator {
   constructor(
@@ -176,7 +178,7 @@ export class ColorExtractionOrchestrator {
   private buildSegmentInfo(
     fgPixelCount: number,
     bgPixelCount: number,
-    segmentation: any
+    segmentation: ServiceSegmentationResult
   ): SegmentInfo {
     const totalPixels = fgPixelCount + bgPixelCount;
     const fgRatio = fgPixelCount / totalPixels;

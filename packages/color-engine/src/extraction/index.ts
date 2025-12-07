@@ -8,11 +8,14 @@ export {
   ExportService,
   MetadataService,
   buildExtractionMetadata,
-  type ExtractionOptions,
-  type SegmentationResult,
-  type PixelExtractionResult,
-  type ClusteringResult,
-  type SegmentationMethod,
-  type SegmentationQuality,
 } from './services';
-export type { ExtractionHooks } from './orchestrator';
+
+// Re-export types from @hue-und-you/types
+export type {
+  ExtractionOptions,
+  ServiceSegmentationResult as SegmentationResult,
+  ServicePixelExtractionResult as PixelExtractionResult,
+  ServiceClusteringResult as ClusteringResult,
+} from '@hue-und-you/types';
+export type { SegmentationMethod, SegmentationQuality } from '@hue-und-you/types';
+export type { ExtractionHooks } from '@hue-und-you/types';

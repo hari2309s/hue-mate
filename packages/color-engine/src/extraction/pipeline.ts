@@ -1,4 +1,4 @@
-import type { ColorPaletteResult } from '@hue-und-you/types';
+import type { ColorPaletteResult, ExtractionOptions, ExtractionHooks } from '@hue-und-you/types';
 import {
   SegmentationService,
   PixelExtractionService,
@@ -6,9 +6,8 @@ import {
   ColorFormattingService,
   ExportService,
   MetadataService,
-  type ExtractionOptions,
 } from './services';
-import { ColorExtractionOrchestrator, type ExtractionHooks } from './orchestrator';
+import { ColorExtractionOrchestrator } from './orchestrator';
 
 // Singleton services
 let orchestratorInstance: ColorExtractionOrchestrator | null = null;

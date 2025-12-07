@@ -6,9 +6,10 @@ import type {
   RGBValues,
   ExtractionMetadata,
   PixelData,
-  SegmentationResult,
-  PixelExtractionResult,
-  ClusteringResult,
+  ServiceSegmentationResult,
+  ServicePixelExtractionResult,
+  ServiceClusteringResult,
+  ColorFormattingOptions,
 } from '@hue-und-you/types';
 import {
   segmentForegroundBackground,
@@ -25,40 +26,32 @@ import {
   finalCleanup,
 } from '@/clustering';
 import { rgbToOklab } from '@/conversion';
-import { formatColor, type ColorFormattingOptions } from '@/formatting';
+import { formatColor } from '@/formatting';
 import { generateExports } from '@/export';
 import { resetPaletteNameTracker } from '@/naming';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
+// Re-export types from @hue-und-you/types
 export type {
-  SegmentationResult,
-  PixelExtractionResult,
-  ClusteringResult,
+  ServiceSegmentationResult as SegmentationResult,
+  ServicePixelExtractionResult as PixelExtractionResult,
+  ServiceClusteringResult as ClusteringResult,
+  ExtractionOptions,
 } from '@hue-und-you/types';
 export type { SegmentationMethod, SegmentationQuality } from '@hue-und-you/types';
-
-export interface ExtractionOptions {
-  numColors?: number;
-  includeBackground?: boolean;
-  generateHarmonies?: boolean;
-}
 
 // ============================================================================
 // SEGMENTATION SERVICE
 // ============================================================================
 
 export class SegmentationService {
-  async segment(imageBuffer: Buffer): Promise<SegmentationResult> {
+  async segment(imageBuffer: Buffer): Promise<ServiceSegmentationResult> {
     perfMonitor.start('segmentation-parallel');
     logger.info('🔍 Segmentation service: Starting parallel segmentation...');
 
     let foregroundMask = null;
     let usedFallback = false;
-    let method: SegmentationResult['method'] = 'mask2former';
-    let quality: SegmentationResult['quality'] = 'high';
+    let method: ServiceSegmentationResult['method'] = 'mask2former';
+    let quality: ServiceSegmentationResult['quality'] = 'high';
     let confidence = 0.9;
     let categories: string[] = [];
 
@@ -152,8 +145,8 @@ export class SegmentationService {
 export class PixelExtractionService {
   async extract(
     imageBuffer: Buffer,
-    segmentation: SegmentationResult
-  ): Promise<PixelExtractionResult> {
+    segmentation: ServiceSegmentationResult
+  ): Promise<ServicePixelExtractionResult> {
     perfMonitor.start('pixel-extraction');
     logger.info('🎯 Pixel extraction service: Starting...');
 
@@ -225,7 +218,7 @@ export class ClusteringService {
     fgPixels: PixelData[],
     bgPixels: PixelData[],
     options?: { numColors?: number }
-  ): Promise<ClusteringResult> {
+  ): Promise<ServiceClusteringResult> {
     perfMonitor.start('clustering');
     logger.info('🔬 Clustering service: Starting...');
 
@@ -397,7 +390,7 @@ export class ExportService {
 export class MetadataService {
   build(
     palette: ExtractedColor[],
-    segmentation: SegmentationResult,
+    segmentation: ServiceSegmentationResult,
     processingStartTime: number
   ): ExtractionMetadata {
     return buildExtractionMetadata(palette, segmentation, processingStartTime);
@@ -487,7 +480,7 @@ function buildSuggestedUsage(
 
 export function buildExtractionMetadata(
   palette: ExtractedColor[],
-  segmentationResult: SegmentationResult,
+  segmentationResult: ServiceSegmentationResult,
   processingStartTime: number
 ): ExtractionMetadata {
   const colorDiversity = computeColorDiversity(palette);
