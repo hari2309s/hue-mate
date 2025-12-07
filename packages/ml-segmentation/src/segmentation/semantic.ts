@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { config } from '@hue-und-you/config';
 import { logger } from '@hue-und-you/utils';
-import type { SegmentResult } from '@/types/segmentation';
+import type { SegmentResult } from '@hue-und-you/types';
 
 export async function segmentSemantic(imageBuffer: Buffer): Promise<SegmentResult[]> {
   try {

@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { config } from '@hue-und-you/config';
 import { logger } from '@hue-und-you/utils';
-import type { ForegroundMask, ExtractedPixels, PixelData } from '@/types/segmentation';
+import type { ForegroundMask, ExtractedPixels, PixelData } from '@hue-und-you/types';
 
 /**
  * Optimized pixel extraction with smart sampling strategies

@@ -1,4 +1,4 @@
-import type { SegmentResult } from '@/types/segmentation';
+import type { SegmentResult } from '@hue-und-you/types';
 
 /**
  * Semantic segmentation classification system
