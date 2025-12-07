@@ -1,4 +1,4 @@
-import type { RGBValues, HSLValues } from '@hue-und-you/types';
+import type { RGBValues, HSLValues, ToneBucket } from '@hue-und-you/types';
 import { rgbToHsl } from '@/conversion';
 import {
   NEUTRAL_THRESHOLD,
@@ -7,7 +7,6 @@ import {
   EARTH_TONES,
   getHuePalette,
   getToneBucket,
-  type ToneBucket,
 } from './palettes';
 import { getPaletteTracker } from './palette-tracker';
 

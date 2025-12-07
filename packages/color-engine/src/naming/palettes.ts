@@ -1,16 +1,4 @@
-export type ToneBucket = 'dark' | 'medium' | 'light';
-
-export interface PaletteToneMap {
-  dark: string[];
-  medium: string[];
-  light: string[];
-}
-
-export interface HuePalette {
-  family: string;
-  range: [number, number];
-  names: PaletteToneMap;
-}
+import type { ToneBucket, PaletteToneMap, HuePalette } from '@hue-und-you/types';
 
 export const NEUTRAL_THRESHOLD = 12;
 export const EARTH_SAT_THRESHOLD = 45;
