@@ -14,6 +14,14 @@ const UPLOAD_PROGRESS_STEPS = {
   PROCESSING: 25,
 } as const;
 
+// Cold start retry configuration
+const COLD_START_CONFIG = {
+  MAX_RETRIES: 3,
+  INITIAL_TIMEOUT: 15000, // 15 seconds for first attempt
+  EXTENDED_TIMEOUT: 45000, // 45 seconds for retries (cold start)
+  RETRY_DELAY: 3000, // 3 seconds between retries
+} as const;
+
 interface UploadOptions {
   numColors?: number;
   includeBackground?: boolean;
@@ -38,15 +46,19 @@ class UploadError extends Error {
   }
 }
 
-class NetworkError extends UploadError {
-  constructor(message: string = 'Network connection failed') {
-    super(message, 'NETWORK_ERROR', undefined, true);
-  }
-}
-
 class TimeoutError extends UploadError {
-  constructor(operation: string) {
-    super(`Operation timed out: ${operation}`, 'TIMEOUT_ERROR', 408, true);
+  constructor(
+    operation: string,
+    public readonly isColdStart: boolean = false
+  ) {
+    super(
+      isColdStart
+        ? `Server is starting up (cold start). This may take up to 60 seconds...`
+        : `Operation timed out: ${operation}`,
+      'TIMEOUT_ERROR',
+      408,
+      isColdStart // Cold start timeouts are retryable
+    );
   }
 }
 
@@ -60,52 +72,80 @@ class ValidationError extends UploadError {
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
-  operation: string
+  operation: string,
+  isColdStartRetry: boolean = false
 ): Promise<T> {
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new TimeoutError(operation)), timeoutMs);
+    setTimeout(() => reject(new TimeoutError(operation, isColdStartRetry)), timeoutMs);
   });
 
   return Promise.race([promise, timeoutPromise]);
 }
 
-async function fetchWithRetry(
+async function fetchWithColdStartRetry(
   url: string,
   options: RequestInit,
-  retries: number = 2
+  attemptNumber: number = 1
 ): Promise<Response> {
-  let lastError: Error;
+  const isColdStartAttempt = attemptNumber > 1;
+  const timeout = isColdStartAttempt
+    ? COLD_START_CONFIG.EXTENDED_TIMEOUT
+    : COLD_START_CONFIG.INITIAL_TIMEOUT;
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+  try {
+    const response = await withTimeout(
+      fetch(url, {
+        ...options,
+        signal: options.signal,
+      }),
+      timeout,
+      'API request',
+      isColdStartAttempt
+    );
 
-      // Don't retry if aborted
-      if (lastError.name === 'AbortError') {
-        throw lastError;
+    return response;
+  } catch (error) {
+    // Check if this is a timeout or network error that might be due to cold start
+    const isColdStartError =
+      error instanceof TimeoutError ||
+      (error instanceof TypeError && error.message.includes('fetch'));
+
+    if (isColdStartError && attemptNumber < COLD_START_CONFIG.MAX_RETRIES) {
+      // Don't retry if aborted by user
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
       }
 
-      // Don't retry on last attempt
-      if (attempt === retries) {
-        throw new NetworkError(lastError.message);
-      }
+      console.log(
+        `[Cold Start] Attempt ${attemptNumber} failed, retrying in ${COLD_START_CONFIG.RETRY_DELAY / 1000}s...`
+      );
 
-      // Wait before retry with exponential backoff
-      await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+      // Wait before retry
+      await new Promise((resolve) => setTimeout(resolve, COLD_START_CONFIG.RETRY_DELAY));
+
+      // Recursive retry
+      return fetchWithColdStartRetry(url, options, attemptNumber + 1);
     }
-  }
 
-  throw lastError!;
+    // Max retries exceeded or non-retryable error
+    if (isColdStartError && attemptNumber >= COLD_START_CONFIG.MAX_RETRIES) {
+      throw new UploadError(
+        'Server is taking too long to respond. Please try again in a few moments.',
+        'COLD_START_TIMEOUT',
+        408,
+        false
+      );
+    }
+
+    throw error;
+  }
 }
 
 function parseErrorResponse(error: unknown): { message: string; code: string; retryable: boolean } {
   // Network errors
   if (error instanceof TypeError && error.message.includes('fetch')) {
     return {
-      message: 'Network connection failed. Please check your internet connection.',
+      message: 'Unable to connect to server. The server may be starting up, please wait...',
       code: 'NETWORK_ERROR',
       retryable: true,
     };
@@ -114,9 +154,11 @@ function parseErrorResponse(error: unknown): { message: string; code: string; re
   // Timeout errors
   if (error instanceof TimeoutError) {
     return {
-      message: error.message,
+      message: error.isColdStart
+        ? 'Server is warming up. Retrying automatically...'
+        : error.message,
       code: error.code,
-      retryable: true,
+      retryable: error.retryable,
     };
   }
 
@@ -181,7 +223,7 @@ async function fileToBase64(file: File): Promise<string> {
         }
 
         resolve(base64);
-      } catch (error) {
+      } catch {
         reject(new UploadError('Failed to process file', 'FILE_READ_ERROR'));
       }
     };
@@ -203,6 +245,7 @@ export function useImageUpload(): UseImageUploadReturn {
   const toastIdRef = useRef<string | number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -239,6 +282,7 @@ export function useImageUpload(): UseImageUploadReturn {
     }
 
     pollingAttemptsRef.current = 0;
+    retryCountRef.current = 0;
   }, []);
 
   const cancel = useCallback(() => {
@@ -260,7 +304,7 @@ export function useImageUpload(): UseImageUploadReturn {
       toast.success('Color extraction complete!', { id: toastIdRef.current });
       toastIdRef.current = null;
     } else if (status === 'error') {
-      toast.error(message, { id: toastIdRef.current });
+      toast.error(message, { id: toastIdRef.current, duration: 6000 });
       toastIdRef.current = null;
     } else {
       toast.loading(message, { id: toastIdRef.current });
@@ -285,10 +329,9 @@ export function useImageUpload(): UseImageUploadReturn {
       }
 
       try {
-        const response = await fetchWithRetry(
+        const response = await fetchWithColdStartRetry(
           `${API_URL}/trpc/getProcessingStatus?input=${encodeURIComponent(JSON.stringify({ imageId }))}`,
-          { signal: abortControllerRef.current.signal },
-          1 // Only 1 retry for polling
+          { signal: abortControllerRef.current.signal }
         );
 
         if (!response.ok) {
@@ -310,7 +353,7 @@ export function useImageUpload(): UseImageUploadReturn {
         if (statusData.status === 'complete') {
           cleanup();
 
-          const resultResponse = await fetchWithRetry(
+          const resultResponse = await fetchWithColdStartRetry(
             `${API_URL}/trpc/getResult?input=${encodeURIComponent(JSON.stringify({ imageId }))}`,
             { signal: abortControllerRef.current?.signal || new AbortController().signal }
           );
@@ -364,6 +407,7 @@ export function useImageUpload(): UseImageUploadReturn {
 
       setResult(null);
       updateProgress('uploading', UPLOAD_PROGRESS_STEPS.PREPARING, 'Preparing upload...');
+      retryCountRef.current = 0;
 
       // Cancel any existing upload
       if (abortControllerRef.current) {
@@ -371,7 +415,7 @@ export function useImageUpload(): UseImageUploadReturn {
       }
       abortControllerRef.current = new AbortController();
 
-      toastIdRef.current = toast.loading('Uploading image...');
+      toastIdRef.current = toast.loading('Connecting to server...');
 
       try {
         // Convert file to base64 with timeout
@@ -380,22 +424,19 @@ export function useImageUpload(): UseImageUploadReturn {
         if (!isMountedRef.current) return;
 
         updateProgress('uploading', UPLOAD_PROGRESS_STEPS.UPLOADING, 'Uploading to server...');
+        toast.loading('Uploading image...', { id: toastIdRef.current });
 
-        // Upload image
-        const uploadResponse = await withTimeout(
-          fetchWithRetry(`${API_URL}/trpc/uploadImage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              filename: file.name,
-              contentType: file.type,
-              base64Data,
-            }),
-            signal: abortControllerRef.current.signal,
+        // Upload image with cold start retry
+        const uploadResponse = await fetchWithColdStartRetry(`${API_URL}/trpc/uploadImage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            base64Data,
           }),
-          60000,
-          'upload'
-        );
+          signal: abortControllerRef.current.signal,
+        });
 
         if (!uploadResponse.ok) {
           const errorData = await uploadResponse.json().catch(() => ({}));
@@ -423,24 +464,20 @@ export function useImageUpload(): UseImageUploadReturn {
         );
         toast.loading('Processing image...', { id: toastIdRef.current });
 
-        // Start processing
-        const processResponse = await withTimeout(
-          fetchWithRetry(`${API_URL}/trpc/processImage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              imageId,
-              options: {
-                numColors: options.numColors,
-                includeBackground: options.includeBackground ?? true,
-                generateHarmonies: options.generateHarmonies ?? true,
-              },
-            }),
-            signal: abortControllerRef.current.signal,
+        // Start processing with cold start retry
+        const processResponse = await fetchWithColdStartRetry(`${API_URL}/trpc/processImage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageId,
+            options: {
+              numColors: options.numColors,
+              includeBackground: options.includeBackground ?? true,
+              generateHarmonies: options.generateHarmonies ?? true,
+            },
           }),
-          30000,
-          'process initiation'
-        );
+          signal: abortControllerRef.current.signal,
+        });
 
         if (!processResponse.ok) {
           throw new UploadError(
@@ -468,7 +505,7 @@ export function useImageUpload(): UseImageUploadReturn {
           updateProgress('error', 0, errorInfo.message, errorInfo.message);
 
           if (toastIdRef.current) {
-            toast.error(errorInfo.message, { id: toastIdRef.current });
+            toast.error(errorInfo.message, { id: toastIdRef.current, duration: 6000 });
             toastIdRef.current = null;
           }
         }
