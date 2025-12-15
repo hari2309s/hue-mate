@@ -6,7 +6,6 @@
 [![TurboRepo](https://img.shields.io/badge/TurboRepo-Monorepo-000000?logo=turborepo&logoColor=white)](https://turbo.build/repo)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express-API-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![tRPC](https://img.shields.io/badge/tRPC-API-398CCB?logo=trpc&logoColor=white)](https://trpc.io/)
 [![Zod](https://img.shields.io/badge/Zod-Schema-3E67B1?logo=zod&logoColor=white)](https://zod.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -34,14 +33,14 @@ ML-driven perceptual color extraction from images. Extract 11-step OKLCH scales,
 - **Accessibility First**: WCAG AA/AAA contrast ratios on white/black, APCA-like metrics, and suggested text colors for every extracted color
 - **Rich Exports**: 11-step tints/shades, classic harmonies (complementary, analogous, triadic, split), temperature classification, and one-click export to CSS variables, SCSS, Tailwind, Figma tokens, Swift, Kotlin, and JSON
 - **Animated UI**: Smooth transitions and real-time progress feedback with Framer Motion
-- **Streaming Support**: Real-time partial color results via `/stream` endpoint during processing
+- **Real-time Updates**: Live progress polling with tRPC for instant feedback
 - **Type-Safe Pipeline**: End-to-end TypeScript with Zod validation and shared types across monorepo
 
 ## 📦 Monorepo Structure
 ```
 hue-und-you/
 ├── apps/
-│   ├── api/              # Express + tRPC color extraction service
+│   ├── api/              # tRPC color extraction service
 │   └── web/              # Next.js 16 frontend with real-time UI
 ├── packages/
 │   ├── api-schema/       # Shared tRPC router & Zod schemas
@@ -58,7 +57,7 @@ hue-und-you/
 | Layer | Technology |
 |-------|-----------|
 | **Frontend** | Next.js 16, React 19, Framer Motion, Tailwind CSS v4 |
-| **Backend** | Express 5, tRPC 11, Node.js 18+ |
+| **Backend** | tRPC 11, Node.js 18+ |
 | **Color Processing** | OKLab/OKLCH conversion, K-means clustering, saturation bias |
 | **ML Models** | Hugging Face (Mask2Former, SegFormer) with fallbacks |
 | **Image I/O** | Sharp for efficient pixel sampling & mask processing |
@@ -123,14 +122,8 @@ pnpm --filter @hue-und-you/web dev
 
 ## 🔌 API Overview
 
-### Health Check
-```
-GET /health
-```
-Simple status endpoint.
-
-### tRPC Procedures (JSON-RPC)
-All endpoints: `POST /trpc/<procedure-name>`
+### tRPC Procedures
+All endpoints use tRPC's type-safe RPC protocol:
 
 | Procedure | Input | Output | Notes |
 |-----------|-------|--------|-------|
@@ -141,11 +134,7 @@ All endpoints: `POST /trpc/<procedure-name>`
 
 **Status Values**: `idle` → `uploading` → `processing` → `segmenting` → `extracting` → `complete` (or `error`)
 
-### Streaming Endpoint
-```
-GET /stream/:imageId?numColors=10&includeBackground=true&generateHarmonies=true
-```
-Returns newline-delimited JSON with partial results and final palette. Useful for progressive UI updates.
+The frontend polls `getProcessingStatus` every 2 seconds for real-time progress updates.
 
 ## 🎨 Color Extraction Pipeline
 
@@ -194,10 +183,10 @@ Returns newline-delimited JSON with partial results and final palette. Useful fo
 
 ### Flow
 1. User drags/selects image
-2. Hook converts to base64 and POST `/trpc/uploadImage`
-3. Receives `imageId` and immediately calls `/trpc/processImage`
-4. Polls `/trpc/getProcessingStatus` every 1s
-5. On completion, fetches `/trpc/getResult`
+2. Hook converts to base64 and calls `uploadImage` mutation
+3. Receives `imageId` and immediately calls `processImage` mutation  
+4. Polls `getProcessingStatus` query every 2s
+5. On completion, fetches `getResult` query
 6. Results render in palette grid with export options
 
 ## 🗄️ Database (Optional)
@@ -244,7 +233,7 @@ Configuration: `apps/api/render.yaml`
 - Build: `pnpm install && pnpm build --filter=@hue-und-you/api`
 - Start: `cd apps/api && node dist/index.js`
 - Port: `10000`
-- Health check: `/health`
+- Health check: `/health` (custom middleware for Render.com)
 
 ### Frontend (Vercel)
 - Framework: Next.js 16
