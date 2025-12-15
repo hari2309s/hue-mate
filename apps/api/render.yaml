@@ -20,7 +20,17 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: CORS_ORIGIN
+        sync: false
       - key: HUGGINGFACE_API_KEY
         sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+      - key: HF_MASK2FORMER_TIMEOUT_MS
+        value: 180000
+      - key: HF_SEGFORMER_TIMEOUT_MS
+        value: 90000
     healthCheckPath: /health
     autoDeploy: true
