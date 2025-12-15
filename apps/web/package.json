@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@hue-und-you/api": "workspace:*",
     "@hue-und-you/api-schema": "workspace:*",
     "@hue-und-you/types": "workspace:*",
     "@tanstack/react-query": "^5.90.10",
