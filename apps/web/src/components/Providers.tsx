@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { httpLink } from '@trpc/client';
+import { createTRPCClient, httpLink } from '@trpc/client';
 import { trpc } from '@/src/lib/trpc';
+import type { AppRouter } from '@hue-und-you/api/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -23,7 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   const [trpcClient] = useState(() =>
-    trpc.createClient({
+    createTRPCClient<AppRouter>({
       links: [
         httpLink({
           url: API_URL,
