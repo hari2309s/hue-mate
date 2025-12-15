@@ -11,7 +11,7 @@ export const processImageSchema = z.object({
   imageId: z.string(),
   options: z
     .object({
-      numColors: z.number().min(3).max(20),
+      numColors: z.number().min(3).max(20).optional(),
       includeBackground: z.boolean().default(true),
       generateHarmonies: z.boolean().default(true),
     })
@@ -26,6 +26,3 @@ export const getResultSchema = z.object({
 export type UploadImageInput = z.infer<typeof uploadImageSchema>;
 export type ProcessImageInput = z.infer<typeof processImageSchema>;
 export type GetResultInput = z.infer<typeof getResultSchema>;
-
-// Re-export trpc utilities
-export { router, publicProcedure } from './trpc';
