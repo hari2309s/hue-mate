@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './globals.css';
 import { ThemeProvider } from '@/src/components/ThemeProvider';
+import { Providers } from '@/src/components/Providers';
 import { Toaster } from '@/src/components/Toaster';
 import ThemeSwitcher from '@/src/components/ThemeSwitcher';
 import { Analytics } from '@vercel/analytics/next';
@@ -25,9 +26,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
           enableSystem
           disableTransitionOnChange={false}
         >
-          {children}
-          <ThemeSwitcher />
-          <Toaster richColors closeButton position="top-right" />
+          <Providers>
+            {children}
+            <ThemeSwitcher />
+            <Toaster richColors closeButton position="top-right" />
+          </Providers>
         </ThemeProvider>
         <Analytics />
       </body>
