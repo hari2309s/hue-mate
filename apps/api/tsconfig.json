@@ -10,7 +10,8 @@
     "paths": {
       "@/*": ["./*"],
       "@hue-und-you/color-engine": ["../../packages/color-engine/src/index.ts"],
-      "@hue-und-you/color-engine/*": ["../../packages/color-engine/src/*"]
+      "@hue-und-you/color-engine/*": ["../../packages/color-engine/src/*"],
+      "@hue-und-you/api-schema/trpc": ["../../packages/api-schema/src/trpc.ts"]
     }
   },
   "references": [

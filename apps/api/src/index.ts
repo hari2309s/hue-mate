@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { createApp } from '@/app';
+import { startServer } from '@/server';
 import { config, validateConfig, printConfigSummary } from '@hue-und-you/config';
 import { logger } from '@hue-und-you/utils';
 import { imageStorage } from '@/services';
 
-async function startServer() {
+async function main() {
   // Validate configuration
   const validation = validateConfig();
 
@@ -37,18 +37,8 @@ async function startServer() {
     databaseUrlSet: !!config.database.url,
   });
 
-  const app = createApp();
-
-  app.listen(config.app.port, () => {
-    logger.success('API server started', {
-      url: `http://localhost:${config.app.port}`,
-      endpoints: {
-        health: '/health',
-        trpc: '/trpc',
-        stream: '/stream/:imageId',
-      },
-    });
-  });
+  // Start tRPC server
+  startServer();
 
   // Graceful shutdown
   process.on('SIGTERM', () => {
@@ -79,7 +69,7 @@ async function startServer() {
   });
 }
 
-startServer().catch((err: unknown) => {
+main().catch((err: unknown) => {
   logger.error('Failed to start server', { error: err });
   process.exit(1);
 });
