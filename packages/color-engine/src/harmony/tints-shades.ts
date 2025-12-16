@@ -4,14 +4,13 @@ import { oklchToRgb, rgbToHex } from '@/conversion';
 export function generateTints(
   oklch: OKLCHValues,
   colorName: string,
-  count: number = 4
+  count: number = 5
 ): TintShade[] {
   const tints: TintShade[] = [];
   const { l, c, h } = oklch;
 
   const isVeryLight = l > 0.85;
   const isLight = l > 0.7;
-
   const headroom = 0.99 - l;
 
   for (let i = 1; i <= count; i++) {
@@ -27,7 +26,7 @@ export function generateTints(
       tintL = Math.min(l + i * step, 0.99);
       tintC = c * (1 - (i / count) * 0.3);
     } else {
-      tintL = Math.min(l + i * 0.1, 0.99);
+      tintL = Math.min(l + i * 0.08, 0.99);
       tintC = c;
     }
 
@@ -39,24 +38,23 @@ export function generateTints(
       level: i * 10,
       hex: tintHex,
       oklch: `oklch(${(tintL * 100).toFixed(2)}% ${tintC.toFixed(3)} ${h.toFixed(1)})`,
-      name: `${colorName} ${400 - i * 100}`,
+      name: `${colorName} Tint ${i}`,
     });
   }
 
-  return tints;
+  return tints.reverse();
 }
 
 export function generateShades(
   oklch: OKLCHValues,
   colorName: string,
-  count: number = 4
+  count: number = 5
 ): TintShade[] {
   const shades: TintShade[] = [];
   const { l, c, h } = oklch;
 
   const isVeryDark = l < 0.25;
   const isDark = l < 0.4;
-
   const room = l - 0.01;
 
   for (let i = 1; i <= count; i++) {
@@ -72,7 +70,7 @@ export function generateShades(
       shadeL = Math.max(l - i * step, 0.01);
       shadeC = c * (1 - (i / count) * 0.4);
     } else {
-      shadeL = Math.max(l - i * 0.1, 0.01);
+      shadeL = Math.max(l - i * 0.08, 0.01);
       shadeC = c;
     }
 
@@ -84,7 +82,7 @@ export function generateShades(
       level: i * 10,
       hex: shadeHex,
       oklch: `oklch(${(shadeL * 100).toFixed(2)}% ${shadeC.toFixed(3)} ${h.toFixed(1)})`,
-      name: `${colorName} ${500 + i * 100}`,
+      name: `${colorName} Shade ${i}`,
     });
   }
 
