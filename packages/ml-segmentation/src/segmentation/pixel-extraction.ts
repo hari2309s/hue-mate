@@ -3,17 +3,9 @@ import { config } from '@hue-und-you/config';
 import { logger } from '@hue-und-you/utils';
 import type { ForegroundMask, ExtractedPixels, PixelData } from '@hue-und-you/types';
 
-/**
- * Optimized pixel extraction with smart sampling strategies
- * - Uses stratified sampling for better color distribution coverage
- * - Implements multi-scale sampling for small vs large images
- * - Pre-allocates arrays for better memory performance
- */
-
 // Generate blue noise-like sampling pattern (better than uniform grid)
 function generateSamplingPattern(totalPixels: number, targetSamples: number): Uint32Array {
   if (totalPixels <= targetSamples) {
-    // Sample all pixels
     const indices = new Uint32Array(totalPixels);
     for (let i = 0; i < totalPixels; i++) {
       indices[i] = i;
@@ -23,8 +15,6 @@ function generateSamplingPattern(totalPixels: number, targetSamples: number): Ui
 
   const sampleRate = totalPixels / targetSamples;
   const indices = new Uint32Array(targetSamples);
-
-  // Use golden ratio for better distribution than uniform
   const goldenRatio = 0.618033988749895;
   let accumulator = 0;
 
@@ -39,8 +29,7 @@ function generateSamplingPattern(totalPixels: number, targetSamples: number): Ui
 
 // Fast brightness check using integer arithmetic
 function isValidBrightness(r: number, g: number, b: number): boolean {
-  // Use weighted average (approximates luminance)
-  const brightness = (r * 77 + g * 150 + b * 29) >> 8; // Fast divide by 256
+  const brightness = (r * 77 + g * 150 + b * 29) >> 8;
   return (
     brightness > config.extraction.brightness.min && brightness < config.extraction.brightness.max
   );
@@ -73,7 +62,6 @@ export async function extractPixels(
   const totalPixels = info.width * info.height;
   const targetSamples = Math.min(totalPixels, config.app.maxSamples);
 
-  // Generate sampling pattern
   const samplingIndices = generateSamplingPattern(totalPixels, targetSamples);
 
   logger.success('Sampling configuration', {
@@ -83,17 +71,14 @@ export async function extractPixels(
     expectedQuality: 'high',
   });
 
-  // Pre-allocate arrays with capacity
   const pixels: PixelData[] = [];
   const isForeground: boolean[] = [];
 
-  // Reserve approximate capacity
   pixels.length = 0;
   isForeground.length = 0;
 
   const channels = info.channels;
 
-  // Process samples
   for (let i = 0; i < samplingIndices.length; i++) {
     const pixelIndex = samplingIndices[i];
     const dataIndex = pixelIndex * channels;
@@ -102,7 +87,6 @@ export async function extractPixels(
     const g = data[dataIndex + 1];
     const b = data[dataIndex + 2];
 
-    // Fast brightness filter
     if (isValidBrightness(r, g, b)) {
       pixels.push({ r, g, b });
 
@@ -125,7 +109,7 @@ export async function extractPixels(
   return { pixels, isForeground };
 }
 
-// Multi-resolution sampling for very large images
+// Parallel multi-scale extraction
 export async function extractPixelsMultiScale(
   imageBuffer: Buffer,
   foregroundMask: ForegroundMask | null
@@ -142,41 +126,53 @@ export async function extractPixelsMultiScale(
 
   logger.info('Using multi-scale sampling for large image');
 
-  // Extract at multiple resolutions and combine
   const scales = [1.0, 0.5, 0.25];
-  const allPixels: PixelData[] = [];
-  const allIsForeground: boolean[] = [];
 
-  for (const scale of scales) {
+  // Process all scales simultaneously
+  const scaleExtractionPromises = scales.map(async (scale) => {
     const scaledWidth = Math.floor(width * scale);
     const scaledHeight = Math.floor(height * scale);
+    const samplesAtScale = Math.floor(config.app.maxSamples * (scale * scale));
+
+    logger.debug(
+      `Processing scale ${scale}: ${scaledWidth}x${scaledHeight}, ${samplesAtScale} samples`
+    );
 
     // Resize image for this scale
     const scaledBuffer = await sharp(imageBuffer)
       .resize(scaledWidth, scaledHeight, {
         fit: 'fill',
-        kernel: 'lanczos3', // High quality resampling
+        kernel: 'lanczos3',
       })
       .raw()
       .toBuffer();
 
-    // Extract subset at this scale
-    const samplesAtScale = Math.floor(config.app.maxSamples * (scale * scale));
-    const { pixels, isForeground } = await extractPixelsAtScale(
+    // Extract pixels at this scale
+    return extractPixelsAtScale(
       scaledBuffer,
       scaledWidth,
       scaledHeight,
       foregroundMask,
       samplesAtScale
     );
+  });
 
-    allPixels.push(...pixels);
-    allIsForeground.push(...isForeground);
+  // Wait for all scales to complete in parallel
+  const scaleResults = await Promise.all(scaleExtractionPromises);
+
+  // Combine results from all scales
+  const allPixels: PixelData[] = [];
+  const allIsForeground: boolean[] = [];
+
+  for (const result of scaleResults) {
+    allPixels.push(...result.pixels);
+    allIsForeground.push(...result.isForeground);
   }
 
   logger.success('Multi-scale extraction complete', {
     totalPixels: allPixels.length,
     scales: scales.length,
+    scaleDistribution: scaleResults.map((r, i) => `${scales[i]}: ${r.pixels.length}`).join(', '),
   });
 
   return { pixels: allPixels, isForeground: allIsForeground };
@@ -196,7 +192,7 @@ async function extractPixelsAtScale(
   const pixels: PixelData[] = [];
   const isForeground: boolean[] = [];
 
-  const channels = 3; // Assuming RGB
+  const channels = 3;
 
   for (const pixelIndex of samplingIndices) {
     const dataIndex = pixelIndex * channels;
@@ -207,7 +203,7 @@ async function extractPixelsAtScale(
 
     if (isValidBrightness(r, g, b)) {
       pixels.push({ r, g, b });
-      isForeground.push(true); // Simplified for scaled images
+      isForeground.push(true);
     }
   }
 
