@@ -20,7 +20,6 @@ async function callHuggingFaceAPI(
       imageSize: imageBuffer.length,
     });
 
-    // Use model-specific timeout, fallback to default
     const timeoutMs =
       config.huggingface.modelTimeouts?.mask2former || config.huggingface.requestTimeoutMs;
 
@@ -40,7 +39,6 @@ async function callHuggingFaceAPI(
     logger.debug('Received response from Mask2Former API', {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
     });
 
     if (!response.ok) {
@@ -55,7 +53,7 @@ async function callHuggingFaceAPI(
       logger.warn('HuggingFace API returned error status', {
         status: response.status,
         statusText: response.statusText,
-        errorText: errorText.substring(0, 500), // Limit error text length
+        errorText: errorText.substring(0, 500),
       });
       throw new ExternalAPIError(`API request failed: ${response.status}`, 'HuggingFace', {
         status: response.status,
@@ -93,7 +91,6 @@ async function callHuggingFaceAPI(
       });
     }
 
-    // Capture more details about the unexpected error
     const errorDetails: Record<string, unknown> = {
       error: error instanceof Error ? error.message : String(error),
     };
@@ -101,7 +98,6 @@ async function callHuggingFaceAPI(
     if (error instanceof Error) {
       errorDetails.name = error.name;
       errorDetails.stack = error.stack;
-      // Check for common error types
       if (error.name === 'AbortError' || error.message.includes('timeout')) {
         errorDetails.type = 'timeout';
         const timeoutMs =
@@ -135,7 +131,8 @@ async function createMaskFromSegments(
     const maskArray = new Uint8Array(width * height);
     let foregroundSegmentCount = 0;
 
-    for (const segment of segments) {
+    // Process mask segments in parallel
+    const segmentProcessingPromises = segments.map(async (segment) => {
       const classification = classifySegment(segment.label, segment.score, segments);
 
       if ((classification === 'foreground' || classification === 'uncertain') && segment.mask) {
@@ -147,22 +144,37 @@ async function createMaskFromSegments(
             .raw()
             .toBuffer({ resolveWithObject: true });
 
-          for (let i = 0; i < maskArray.length && i < segmentMaskData.length; i++) {
-            if (segmentMaskData[i] > 128) {
-              maskArray[i] = 255;
-            }
-          }
-
-          foregroundSegmentCount++;
-          logger.success(
-            `Added ${classification} segment: ${segment.label} (score: ${segment.score.toFixed(2)})`
-          );
+          return {
+            success: true,
+            data: segmentMaskData,
+            label: segment.label,
+            score: segment.score,
+            classification,
+          };
         } catch (maskError) {
           logger.warn(`Failed to process mask for ${segment.label}`, {
             error: maskError instanceof Error ? maskError.message : String(maskError),
           });
-          // Continue processing other segments
+          return { success: false };
         }
+      }
+      return { success: false };
+    });
+
+    const processedSegments = await Promise.all(segmentProcessingPromises);
+
+    // Combine all processed masks into single array
+    for (const result of processedSegments) {
+      if (result.success && result.data) {
+        for (let i = 0; i < maskArray.length && i < result.data.length; i++) {
+          if (result.data[i] > 128) {
+            maskArray[i] = 255;
+          }
+        }
+        foregroundSegmentCount++;
+        logger.success(
+          `Added ${result.classification} segment: ${result.label} (score: ${result.score!.toFixed(2)})`
+        );
       }
     }
 
@@ -202,7 +214,6 @@ export async function segmentForegroundBackground(
   try {
     logger.info('Starting foreground/background segmentation');
 
-    // Validate input
     if (!Buffer.isBuffer(imageBuffer) || imageBuffer.length === 0) {
       throw new SegmentationError('Invalid image buffer', {
         isBuffer: Buffer.isBuffer(imageBuffer),
@@ -210,27 +221,40 @@ export async function segmentForegroundBackground(
       });
     }
 
-    // Get image dimensions
-    const metadata = await sharp(imageBuffer)
-      .metadata()
-      .catch((error) => {
-        throw new SegmentationError('Failed to read image metadata', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
+    // Parallel metadata fetch and image resize
+    const [metadata, resizedBuffer] = await Promise.all([
+      sharp(imageBuffer)
+        .metadata()
+        .catch((error) => {
+          throw new SegmentationError('Failed to read image metadata', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }),
+      sharp(imageBuffer)
+        .png()
+        .toBuffer()
+        .catch((error) => {
+          throw new SegmentationError('Failed to resize image', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }),
+    ]);
 
     const { width, height } = metadata;
     if (!width || !height) {
       throw new SegmentationError('Could not determine image dimensions', { metadata });
     }
 
+    logger.info(
+      `Image dimensions: ${width}x${height}, resized buffer: ${resizedBuffer.length} bytes`
+    );
+
     // Call API with retry logic
-    const segments = await withRetry(() => callHuggingFaceAPI(imageBuffer), {
+    const segments = await withRetry(() => callHuggingFaceAPI(resizedBuffer), {
       maxAttempts: 2,
       delayMs: config.huggingface.retryDelayMs,
       backoff: false,
       retryIf: (error) => {
-        // Only retry on 503 (model loading)
         return error instanceof ExternalAPIError && error.context?.status === 503;
       },
     });
@@ -254,7 +278,6 @@ export async function segmentForegroundBackground(
       foreground_percentage: result.foregroundPercentage,
     };
   } catch (error) {
-    // Log detailed error information for debugging
     const errorDetails: Record<string, unknown> = {
       operation: 'segmentation',
       method: 'foreground-background',
