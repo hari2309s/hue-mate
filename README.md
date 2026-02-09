@@ -1,4 +1,4 @@
-# hue-und-you
+# hute-mate
 
 <div align="left">
 
@@ -38,7 +38,7 @@ ML-driven perceptual color extraction from images. Extract 11-step OKLCH scales,
 
 ## 📦 Monorepo Structure
 ```
-hue-und-you/
+hute-mate/
 ├── apps/
 │   ├── api/              # tRPC color extraction service
 │   └── web/              # Next.js 16 frontend with real-time UI
@@ -76,7 +76,7 @@ hue-und-you/
 1. **Clone & install**:
 ```bash
    git clone <repo-url>
-   cd hue-und-you
+   cd hute-mate
    pnpm install
 ```
 
@@ -114,10 +114,10 @@ pnpm format
 pnpm clean
 
 # Run API only
-pnpm --filter @hue-und-you/api dev
+pnpm --filter @hute-mate/api dev
 
 # Run web only
-pnpm --filter @hue-und-you/web dev
+pnpm --filter @hute-mate/web dev
 ```
 
 ## 🔌 API Overview
@@ -139,7 +139,7 @@ The frontend polls `getProcessingStatus` every 2 seconds for real-time progress 
 ## 🎨 Color Extraction Pipeline
 
 ### Entry Point
-`@hue-und-you/color-engine` (stage-based architecture, consumed by API)
+`@hute-mate/color-engine` (stage-based architecture, consumed by API)
 
 ### Stage 1: Segmentation
 - **Foreground/Background**: Mask2Former (COCO panoptic) → label classification
@@ -230,7 +230,7 @@ Every result includes `ExtractionMetadata`:
 
 ### API (Render)
 Configuration: `apps/api/render.yaml`
-- Build: `pnpm install && pnpm build --filter=@hue-und-you/api`
+- Build: `pnpm install && pnpm build --filter=@hute-mate/api`
 - Start: `cd apps/api && node dist/index.js`
 - Port: `10000`
 - Health check: `/health` (custom middleware for Render.com)
@@ -280,4 +280,4 @@ ISC
 
 ---
 
-**Built for designers who ship.** hue-und-you combines cutting-edge ML segmentation, perceptual color science, and export flexibility—from concept to production in seconds.
+**Built for designers who ship.** hute-mate combines cutting-edge ML segmentation, perceptual color science, and export flexibility—from concept to production in seconds.
