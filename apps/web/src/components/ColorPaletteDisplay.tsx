@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ColorPaletteResult, ExtractedColor } from '@hue-und-you/types';
+import type { ColorPaletteResult, ExtractedColor } from '@hute-mate/types';
 import ExtractionMetadata from '@/src/components/ExtractionMetadata';
 import ExportButtons from '@/src/components/ExportButtons';
 

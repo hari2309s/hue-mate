@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ColorPaletteResult, UploadProgress, UploadStatus } from '@hue-und-you/types';
+import type { ColorPaletteResult, UploadProgress, UploadStatus } from '@hute-mate/types';
 
 interface AppState {
   // Image preview

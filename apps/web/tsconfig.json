@@ -4,11 +4,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@hue-und-you/db": ["../../packages/db/src"],
-      "@hue-und-you/api-schema": ["../../packages/api-schema/src"],
-      "@hue-und-you/types": ["../../packages/types/src"]
-    }
+      "@hute-mate/db": ["../../packages/db/src"],
+      "@hute-mate/api-schema": ["../../packages/api-schema/src"],
+      "@hute-mate/types": ["../../packages/types/src"],
+    },
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
 }

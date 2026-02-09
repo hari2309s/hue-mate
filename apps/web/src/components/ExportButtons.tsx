@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import { FileCode, FileJson, Palette, Package } from 'lucide-react';
-import type { ExportFormats } from '@hue-und-you/types';
+import type { ExportFormats } from '@hute-mate/types';
 import ExportModal from './ExportModal';
 
 interface ExportButtonsProps {

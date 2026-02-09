@@ -11,7 +11,7 @@ import {
   Layers,
   TrendingUp,
 } from 'lucide-react';
-import type { ExtractionMetadata } from '@hue-und-you/types';
+import type { ExtractionMetadata } from '@hute-mate/types';
 
 interface ExtractionMetadataProps {
   metadata: ExtractionMetadata;

@@ -8,7 +8,7 @@ import ThemeSwitcher from '@/src/components/ThemeSwitcher';
 import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
-  title: 'hue-und-you',
+  title: 'hute-mate',
   description: 'ML-driven perceptual color extractor',
 };
 

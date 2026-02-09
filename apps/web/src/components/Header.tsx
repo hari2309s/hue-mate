@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 
-const titleText = 'hue-und-you';
+const titleText = 'hute-mate';
 
 const containerVariants = {
   hidden: { opacity: 0 },

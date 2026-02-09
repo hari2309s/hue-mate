@@ -1,5 +1,5 @@
 {
-  "name": "@hue-und-you/web",
+  "name": "@hute-mate/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@hue-und-you/api": "workspace:*",
-    "@hue-und-you/api-schema": "workspace:*",
-    "@hue-und-you/types": "workspace:*",
+    "@hute-mate/api": "workspace:*",
+    "@hute-mate/api-schema": "workspace:*",
+    "@hute-mate/types": "workspace:*",
     "@tanstack/react-query": "^5.90.10",
     "@trpc/client": "^11.7.1",
     "@trpc/react-query": "^11.7.1",
