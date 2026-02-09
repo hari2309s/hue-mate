@@ -1,7 +1,7 @@
 {
-  "name": "@hue-und-you/ml-segmentation",
+  "name": "@hute-mate/ml-segmentation",
   "version": "1.0.0",
-  "description": "ML segmentation utilities for hue-und-you",
+  "description": "ML segmentation utilities for hute-mate",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -22,8 +22,8 @@
     "src"
   ],
   "dependencies": {
-    "@hue-und-you/config": "workspace:*",
-    "@hue-und-you/utils": "workspace:*",
+    "@hute-mate/config": "workspace:*",
+    "@hute-mate/utils": "workspace:*",
     "sharp": "^0.34.5"
   },
   "devDependencies": {

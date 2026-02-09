@@ -1,4 +1,4 @@
-import type { PixelData } from '@hue-und-you/types';
+import type { PixelData } from '@hute-mate/types';
 
 export function splitPixelsByLuminance(
   pixels: PixelData[],

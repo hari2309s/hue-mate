@@ -1,1 +1,1 @@
-export * from '@hue-und-you/config';
+export * from '@hute-mate/config';

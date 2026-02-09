@@ -1,7 +1,7 @@
 import sharp from 'sharp';
-import { config } from '@hue-und-you/config';
-import { logger } from '@hue-und-you/utils';
-import type { ForegroundMask, ExtractedPixels, PixelData } from '@hue-und-you/types';
+import { config } from '@hute-mate/config';
+import { logger } from '@hute-mate/utils';
+import type { ForegroundMask, ExtractedPixels, PixelData } from '@hute-mate/types';
 
 // Generate blue noise-like sampling pattern (better than uniform grid)
 function generateSamplingPattern(totalPixels: number, targetSamples: number): Uint32Array {

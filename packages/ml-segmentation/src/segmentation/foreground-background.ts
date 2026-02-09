@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { config } from '@/config';
-import { SegmentationError, ExternalAPIError, withRetry, logger } from '@hue-und-you/utils';
-import type { ForegroundMask, SegmentResult } from '@hue-und-you/types';
+import { SegmentationError, ExternalAPIError, withRetry, logger } from '@hute-mate/utils';
+import type { ForegroundMask, SegmentResult } from '@hute-mate/types';
 import { classifySegment } from './classification';
 
 async function callHuggingFaceAPI(
