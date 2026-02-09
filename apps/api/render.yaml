@@ -1,19 +1,19 @@
 services:
   - type: web
-    name: hue-und-you-api
+    name: hute-mate-api
     runtime: node
     region: frankfurt
     plan: starter
     buildCommand: |
       pnpm install && \
-      pnpm --filter "@hue-und-you/types" build && \
-      pnpm --filter "@hue-und-you/config" build && \
-      pnpm --filter "@hue-und-you/utils" build && \
-      pnpm --filter "@hue-und-you/ml-segmentation" build && \
-      pnpm --filter "@hue-und-you/color-engine" build && \
-      pnpm --filter "@hue-und-you/db" build && \
-      pnpm --filter "@hue-und-you/api-schema" build && \
-      pnpm --filter "@hue-und-you/api" build
+      pnpm --filter "@hute-mate/types" build && \
+      pnpm --filter "@hute-mate/config" build && \
+      pnpm --filter "@hute-mate/utils" build && \
+      pnpm --filter "@hute-mate/ml-segmentation" build && \
+      pnpm --filter "@hute-mate/color-engine" build && \
+      pnpm --filter "@hute-mate/db" build && \
+      pnpm --filter "@hute-mate/api-schema" build && \
+      pnpm --filter "@hute-mate/api" build
     startCommand: 'cd apps/api && node dist/index.js'
     envVars:
       - key: NODE_ENV

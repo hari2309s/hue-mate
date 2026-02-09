@@ -1,9 +1,9 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { config } from '@hue-und-you/config';
-import { StorageError, logger } from '@hue-und-you/utils';
-import type { ImageData } from '@hue-und-you/types';
+import { config } from '@hute-mate/config';
+import { StorageError, logger } from '@hute-mate/utils';
+import type { ImageData } from '@hute-mate/types';
 
 interface ImageMetadata {
   filename: string;
@@ -18,7 +18,7 @@ class ImageStorageService {
   private initialized: boolean = false;
 
   constructor() {
-    this.tempDir = path.join(os.tmpdir(), 'hue-und-you-uploads');
+    this.tempDir = path.join(os.tmpdir(), 'hute-mate-uploads');
   }
 
   async initialize(): Promise<void> {

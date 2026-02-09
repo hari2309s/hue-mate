@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { startServer } from '@/server';
-import { config, validateConfig, printConfigSummary } from '@hue-und-you/config';
-import { logger } from '@hue-und-you/utils';
+import { config, validateConfig, printConfigSummary } from '@hute-mate/config';
+import { logger } from '@hute-mate/utils';
 import { imageStorage } from '@/services';
 
 async function main() {

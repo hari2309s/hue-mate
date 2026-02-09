@@ -1,5 +1,5 @@
-import { logger } from '@hue-und-you/utils';
-import type { JobData, UploadStatus } from '@hue-und-you/types';
+import { logger } from '@hute-mate/utils';
+import type { JobData, UploadStatus } from '@hute-mate/types';
 
 class JobQueueService {
   private jobStore = new Map<string, JobData>();

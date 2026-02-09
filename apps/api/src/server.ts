@@ -1,7 +1,7 @@
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import { appRouter } from '@/trpc-router';
-import { config } from '@hue-und-you/config';
-import { logger } from '@hue-und-you/utils';
+import { config } from '@hute-mate/config';
+import { logger } from '@hute-mate/utils';
 
 // Combined middleware for CORS and health check
 const middleware = (req: any, res: any, next: () => void) => {
@@ -19,13 +19,13 @@ const middleware = (req: any, res: any, next: () => void) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
+
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     res.end();
     return;
   }
-  
+
   next();
 };
 
@@ -41,7 +41,7 @@ export const server = createHTTPServer({
 
 export function startServer() {
   server.listen(config.app.port);
-  
+
   logger.success('tRPC server started', {
     url: `http://localhost:${config.app.port}`,
     endpoints: {

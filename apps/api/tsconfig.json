@@ -9,10 +9,10 @@
     "types": ["node"],
     "paths": {
       "@/*": ["./*"],
-      "@hue-und-you/color-engine": ["../../packages/color-engine/src/index.ts"],
-      "@hue-und-you/color-engine/*": ["../../packages/color-engine/src/*"],
-      "@hue-und-you/api-schema/trpc": ["../../packages/api-schema/src/trpc.ts"]
-    }
+      "@hute-mate/color-engine": ["../../packages/color-engine/src/index.ts"],
+      "@hute-mate/color-engine/*": ["../../packages/color-engine/src/*"],
+      "@hute-mate/api-schema/trpc": ["../../packages/api-schema/src/trpc.ts"],
+    },
   },
   "references": [
     { "path": "../../packages/types" },
@@ -21,16 +21,16 @@
     { "path": "../../packages/color-engine" },
     { "path": "../../packages/ml-segmentation" },
     { "path": "../../packages/config" },
-    { "path": "../../packages/utils" }
+    { "path": "../../packages/utils" },
   ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
   "ts-node": {
     "esm": true,
-    "experimentalSpecifierResolution": "node"
+    "experimentalSpecifierResolution": "node",
   },
   "tsc-alias": {
     "resolveFullPaths": true,
-    "verbose": false
-  }
+    "verbose": false,
+  },
 }

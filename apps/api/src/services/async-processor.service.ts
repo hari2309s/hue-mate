@@ -1,8 +1,8 @@
-import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '@hue-und-you/utils';
-import { config } from '@hue-und-you/config';
-import type { ColorPaletteResult, ProcessingOptions } from '@hue-und-you/types';
+import { logger, TimeoutError, ImageProcessingError, NotFoundError } from '@hute-mate/utils';
+import { config } from '@hute-mate/config';
+import type { ColorPaletteResult, ProcessingOptions } from '@hute-mate/types';
 import { jobQueue, imageStorage } from '@/services';
-import { extractColorsFromImage } from '@hue-und-you/color-engine';
+import { extractColorsFromImage } from '@hute-mate/color-engine';
 
 class AsyncProcessorService {
   private activeTimeouts = new Map<string, NodeJS.Timeout>();
