@@ -1,7 +1,7 @@
 {
-  "name": "@hue-und-you/utils",
+  "name": "@hute-mate/utils",
   "version": "1.0.0",
-  "description": "Shared utilities for hue-und-you",
+  "description": "Shared utilities for hute-mate",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
