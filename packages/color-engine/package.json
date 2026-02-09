@@ -1,7 +1,7 @@
 {
-  "name": "@hue-und-you/color-engine",
+  "name": "@hute-mate/color-engine",
   "version": "1.0.0",
-  "description": "Core color processing engine for hue-und-you",
+  "description": "Core color processing engine for hute-mate",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -22,10 +22,10 @@
     "src"
   ],
   "dependencies": {
-    "@hue-und-you/config": "workspace:*",
-    "@hue-und-you/ml-segmentation": "workspace:*",
-    "@hue-und-you/utils": "workspace:*",
-    "@hue-und-you/types": "workspace:*",
+    "@hute-mate/config": "workspace:*",
+    "@hute-mate/ml-segmentation": "workspace:*",
+    "@hute-mate/utils": "workspace:*",
+    "@hute-mate/types": "workspace:*",
     "color-namer": "^1.4.0",
     "nearest-pantone": "^1.0.1",
     "sharp": "^0.34.5"

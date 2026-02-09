@@ -1,4 +1,4 @@
-import type { RGBValues, ContrastResult } from '@hue-und-you/types';
+import type { RGBValues, ContrastResult } from '@hute-mate/types';
 
 function relativeLuminance(r: number, g: number, b: number): number {
   const [rs, gs, bs] = [r, g, b].map((c) => {

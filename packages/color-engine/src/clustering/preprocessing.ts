@@ -1,6 +1,6 @@
-import type { PixelData, PixelWithWeight } from '@hue-und-you/types';
+import type { PixelData, PixelWithWeight } from '@hute-mate/types';
 import { rgbToHsl, rgbToOklab } from '@/conversion';
-import { config } from '@hue-und-you/config';
+import { config } from '@hute-mate/config';
 
 export function applySaturationBias(pixels: PixelData[]): PixelData[] {
   const biased: PixelData[] = [];

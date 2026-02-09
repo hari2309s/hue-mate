@@ -1,4 +1,4 @@
-import type { ExtractedColor, ExportFormats } from '@hue-und-you/types';
+import type { ExtractedColor, ExportFormats } from '@hute-mate/types';
 import { deduplicateColors, buildColorScale, CSS_SCALE_STEPS } from './utils';
 
 export function generateCssVariables(palette: ExtractedColor[]): string {

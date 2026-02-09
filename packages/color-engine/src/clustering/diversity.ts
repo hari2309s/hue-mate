@@ -1,6 +1,6 @@
-import type { PixelWithWeight } from '@hue-und-you/types';
+import type { PixelWithWeight } from '@hute-mate/types';
 import { rgbToHsl } from '@/conversion';
-import { config } from '@hue-und-you/config';
+import { config } from '@hute-mate/config';
 
 export function enforceHueDiversity(
   colors: PixelWithWeight[],

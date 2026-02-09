@@ -1,4 +1,4 @@
-import type { ToneBucket, PaletteToneMap, HuePalette } from '@hue-und-you/types';
+import type { ToneBucket, PaletteToneMap, HuePalette } from '@hute-mate/types';
 
 export const NEUTRAL_THRESHOLD = 12;
 export const EARTH_SAT_THRESHOLD = 45;

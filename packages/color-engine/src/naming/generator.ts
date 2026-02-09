@@ -1,4 +1,4 @@
-import type { RGBValues, HSLValues, ToneBucket } from '@hue-und-you/types';
+import type { RGBValues, HSLValues, ToneBucket } from '@hute-mate/types';
 import { rgbToHsl } from '@/conversion';
 import {
   NEUTRAL_THRESHOLD,

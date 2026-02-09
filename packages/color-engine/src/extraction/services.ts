@@ -1,6 +1,6 @@
 import sharp from 'sharp';
-import { logger, perfMonitor } from '@hue-und-you/utils';
-import { config } from '@hue-und-you/config';
+import { logger, perfMonitor } from '@hute-mate/utils';
+import { config } from '@hute-mate/config';
 import type {
   ExtractedColor,
   RGBValues,
@@ -10,14 +10,14 @@ import type {
   ServicePixelExtractionResult,
   ServiceClusteringResult,
   ColorFormattingOptions,
-} from '@hue-und-you/types';
+} from '@hute-mate/types';
 import {
   segmentForegroundBackground,
   segmentSemantic,
   extractPixels,
   extractPixelsMultiScale,
   splitPixelsByLuminance,
-} from '@hue-und-you/ml-segmentation';
+} from '@hute-mate/ml-segmentation';
 import {
   applySaturationBias,
   kMeansClusteringOklab,
@@ -30,14 +30,14 @@ import { formatColor } from '@/formatting';
 import { generateExports } from '@/export';
 import { resetPaletteNameTracker } from '@/naming';
 
-// Re-export types from @hue-und-you/types
+// Re-export types from @hute-mate/types
 export type {
   ServiceSegmentationResult as SegmentationResult,
   ServicePixelExtractionResult as PixelExtractionResult,
   ServiceClusteringResult as ClusteringResult,
   ExtractionOptions,
-} from '@hue-und-you/types';
-export type { SegmentationMethod, SegmentationQuality } from '@hue-und-you/types';
+} from '@hute-mate/types';
+export type { SegmentationMethod, SegmentationQuality } from '@hute-mate/types';
 
 // ============================================================================
 // SEGMENTATION SERVICE

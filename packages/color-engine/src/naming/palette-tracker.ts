@@ -1,4 +1,4 @@
-import type { PaletteToneMap, ToneBucket } from '@hue-und-you/types';
+import type { PaletteToneMap, ToneBucket } from '@hute-mate/types';
 
 export class PaletteNameTracker {
   private usedBaseNames = new Set<string>();

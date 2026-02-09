@@ -1,4 +1,4 @@
-import type { ExtractedColor } from '@hue-und-you/types';
+import type { ExtractedColor } from '@hute-mate/types';
 
 export const CSS_SCALE_STEPS = [
   '50',

@@ -5,7 +5,7 @@ import type {
   LABValues,
   LCHValues,
   ColorFormats,
-} from '@hue-und-you/types';
+} from '@hute-mate/types';
 import { rgbToOklabCached, oklabToOklch, rgbToHexFast, rgbToHslCached } from './oklab';
 
 export function rgbToHsb(r: number, g: number, b: number): HSBValues {

@@ -15,20 +15,20 @@
       "@/export": ["./export"],
       "@/extraction": ["./extraction"],
       "@/types/*": ["./types/*"],
-      "@hue-und-you/ml-segmentation": ["../ml-segmentation/src/index.ts"],
-      "@hue-und-you/ml-segmentation/*": ["../ml-segmentation/src/*"],
-      "@hue-und-you/config": ["../config/src/index.ts"],
-      "@hue-und-you/config/*": ["../config/src/*"],
-      "@hue-und-you/utils": ["../utils/src/index.ts"],
-      "@hue-und-you/utils/*": ["../utils/src/*"]
-    }
+      "@hute-mate/ml-segmentation": ["../ml-segmentation/src/index.ts"],
+      "@hute-mate/ml-segmentation/*": ["../ml-segmentation/src/*"],
+      "@hute-mate/config": ["../config/src/index.ts"],
+      "@hute-mate/config/*": ["../config/src/*"],
+      "@hute-mate/utils": ["../utils/src/index.ts"],
+      "@hute-mate/utils/*": ["../utils/src/*"],
+    },
   },
   "references": [
     { "path": "../ml-segmentation" },
     { "path": "../config" },
     { "path": "../utils" },
-    { "path": "../types" }
+    { "path": "../types" },
   ],
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist"],
 }

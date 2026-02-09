@@ -1,4 +1,4 @@
-import type { OKLCHValues, TintShade } from '@hue-und-you/types';
+import type { OKLCHValues, TintShade } from '@hute-mate/types';
 import { oklchToRgb, rgbToHex } from '@/conversion';
 
 export function generateTints(

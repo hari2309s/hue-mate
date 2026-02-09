@@ -1,4 +1,4 @@
-import type { OKLCHValues, ColorHarmony, HarmonyColor } from '@hue-und-you/types';
+import type { OKLCHValues, ColorHarmony, HarmonyColor } from '@hute-mate/types';
 import { oklchToRgb, rgbToHex } from '@/conversion';
 
 function rotateHue(h: number, deg: number): number {

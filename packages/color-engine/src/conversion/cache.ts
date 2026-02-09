@@ -1,5 +1,5 @@
-import { LRUCache } from '@hue-und-you/utils';
-import type { RGBValues, HSLValues, OklabColor } from '@hue-und-you/types';
+import { LRUCache } from '@hute-mate/utils';
+import type { RGBValues, HSLValues, OklabColor } from '@hute-mate/types';
 
 // Cache instances
 export const oklabCache = new LRUCache<number, OklabColor>(2000);

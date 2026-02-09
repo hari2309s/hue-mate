@@ -5,9 +5,9 @@ import type {
   ExtractionOptions,
   ExtractionHooks,
   ServiceSegmentationResult,
-} from '@hue-und-you/types';
-import { logger, perfMonitor } from '@hue-und-you/utils';
-import { config } from '@hue-und-you/config';
+} from '@hute-mate/types';
+import { logger, perfMonitor } from '@hute-mate/utils';
+import { config } from '@hute-mate/config';
 import { clearConversionCaches, getConversionCacheStats } from '@/conversion';
 import {
   SegmentationService,

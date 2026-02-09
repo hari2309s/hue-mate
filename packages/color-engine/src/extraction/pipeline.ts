@@ -1,4 +1,4 @@
-import type { ColorPaletteResult, ExtractionOptions, ExtractionHooks } from '@hue-und-you/types';
+import type { ColorPaletteResult, ExtractionOptions, ExtractionHooks } from '@hute-mate/types';
 import {
   SegmentationService,
   PixelExtractionService,

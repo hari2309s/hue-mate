@@ -1,6 +1,6 @@
-import type { PixelData, PixelWithWeight, PixelWithOklab } from '@hue-und-you/types';
+import type { PixelData, PixelWithWeight, PixelWithOklab } from '@hute-mate/types';
 import { rgbToOklab, oklabToOklch, oklchToRgb } from '@/conversion';
-import { config } from '@hue-und-you/config';
+import { config } from '@hute-mate/config';
 
 class SeededRandom {
   private seed: number;

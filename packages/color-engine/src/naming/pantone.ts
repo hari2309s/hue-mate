@@ -1,4 +1,4 @@
-import type { RGBValues } from '@hue-und-you/types';
+import type { RGBValues } from '@hute-mate/types';
 
 const PANTONE_COLORS = [
   { name: 'PANTONE 18-1664 TCX Flame Scarlet', rgb: { r: 205, g: 33, b: 42 } },

@@ -1,4 +1,4 @@
-import type { RGBValues, ExtractedColor, ColorFormattingOptions } from '@hue-und-you/types';
+import type { RGBValues, ExtractedColor, ColorFormattingOptions } from '@hute-mate/types';
 import { buildColorFormats } from '@/conversion';
 import { buildAccessibilityInfo } from '@/accessibility';
 import { generateTintsAndShades, generateHarmonies } from '@/harmony';

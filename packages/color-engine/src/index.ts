@@ -16,7 +16,7 @@ export {
 } from './extraction';
 
 // ============================================================================
-// RE-EXPORT TYPES FROM @hue-und-you/types
+// RE-EXPORT TYPES FROM @hute-mate/types
 // ============================================================================
 export type {
   // Extraction
@@ -66,7 +66,7 @@ export type {
   ColorPaletteResult,
   ExtractionMetadata,
   ExportFormats,
-} from '@hue-und-you/types';
+} from '@hute-mate/types';
 
 // ============================================================================
 // CONVERSION
@@ -162,4 +162,4 @@ export {
   extractPixelsMultiScale,
   splitPixelsByLuminance,
   classifySegment,
-} from '@hue-und-you/ml-segmentation';
+} from '@hute-mate/ml-segmentation';

@@ -1,4 +1,4 @@
-import type { RGBValues, AccessibilityInfo } from '@hue-und-you/types';
+import type { RGBValues, AccessibilityInfo } from '@hute-mate/types';
 import { contrastRatio, buildContrastResult } from './contrast';
 import { calculateAPCA } from './apca';
 

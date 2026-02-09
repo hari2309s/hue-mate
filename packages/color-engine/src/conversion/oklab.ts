@@ -1,4 +1,4 @@
-import type { RGBValues, HSLValues, OKLCHValues, OklabColor } from '@hue-und-you/types';
+import type { RGBValues, HSLValues, OKLCHValues, OklabColor } from '@hute-mate/types';
 import { oklabCache, hslCache, oklchCache, LINEAR_LUT, rgbToKey, linearToSrgbFast } from './cache';
 
 export function rgbToOklabCached(r: number, g: number, b: number): OklabColor {
